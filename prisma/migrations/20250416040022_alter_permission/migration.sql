@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Permission" ALTER COLUMN "sequence" SET DEFAULT 0,
+ALTER COLUMN "sequence" SET DATA TYPE DOUBLE PRECISION;

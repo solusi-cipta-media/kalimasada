@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String   @unique
+  roleId    Int
+  password  String
+  avatar    String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id])
+}
+
+model Role {
+  id                Int              @id @default(autoincrement())
+  name              String
+  description       String?
+  byPassAllFeatures Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  User              User[]
+  RolePermission    RolePermission[]
+}
+
+model Permission {
+  id             Int              @id @default(autoincrement())
+  label          String
+  href           String?
+  description    String?
+  icon           String?
+  isSection      Boolean          @default(false)
+  sequence       Float            @default(0)
+  parentId       Int?
+  showOnSidebar  Boolean          @default(false)
+  parent         Permission?      @relation("children", fields: [parentId], references: [id])
+  children       Permission[]     @relation("children")
+  RolePermission RolePermission[]
+}
+
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+}
