@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 
 import dummySeeder from "./dummy";
 import PermissionSeeder from "./data/Permission.seed";
+import SpaDataSeeder from "./data/SpaData.seed";
 
 async function seed() {
   // your seed code here
@@ -25,6 +26,7 @@ async function seed() {
   }
 
   await PermissionSeeder(db);
+  await SpaDataSeeder(db);
   await db.$disconnect();
 }
 

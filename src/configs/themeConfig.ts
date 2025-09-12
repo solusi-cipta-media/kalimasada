@@ -55,10 +55,10 @@ export type Config = {
 };
 
 const themeConfig: Config = {
-  templateName: "APP NAME",
-  subTemplateName: "APP INFO",
-  icon: "/logo.svg",
-  settingsCookieName: "vuexy-mui-next-demo-1",
+  templateName: "KALIMASADA",
+  subTemplateName: "Spa & Salon Management System",
+  icon: "/logo kalimasada (1).png",
+  settingsCookieName: "kalimasada-spa-settings",
   mode: "system", // 'system', 'light', 'dark'
   skin: "default", // 'default', 'bordered'
   semiDark: false, // true, false

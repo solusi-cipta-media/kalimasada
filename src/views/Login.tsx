@@ -129,10 +129,14 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
 
     try {
       await requestLogin({ email: formData.email, password: formData.password });
+      // Clear any error
+      setErrorText(null);
+      // Redirect to home page
       setTimeout(() => {
-        location.href = "/";
+        window.location.href = "/home";
       }, 100);
     } catch (error) {
+      console.error("Login error:", error);
       setErrorText("Invalid username or password");
     }
 

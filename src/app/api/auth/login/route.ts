@@ -39,7 +39,14 @@ export async function POST(req: NextRequest) {
 
     const cookieName = getCookieName(req);
 
-    response.cookies.set(cookieName, jwt, { httpOnly: true, secure: true, path: "/" });
+    // In development, use secure: false; in production use secure: true
+    const isProduction = process.env.NODE_ENV === "production";
+    response.cookies.set(cookieName, jwt, {
+      httpOnly: true,
+      secure: isProduction,
+      path: "/",
+      sameSite: "lax"
+    });
 
     return response;
   } catch (error: any) {

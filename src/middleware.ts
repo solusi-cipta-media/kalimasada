@@ -48,7 +48,15 @@ export async function middleware(req: NextRequest) {
     const response = NextResponse.next();
 
     response.headers.set("userId", String(userId));
-    response.cookies.set(cookieName, await jwtSign({ userId }), { httpOnly: true, secure: true, path: "/" });
+
+    // In development, use secure: false; in production use secure: true
+    const isProduction = process.env.NODE_ENV === "production";
+    response.cookies.set(cookieName, await jwtSign({ userId }), {
+      httpOnly: true,
+      secure: isProduction,
+      path: "/",
+      sameSite: "lax"
+    });
     addCorsHeaders(response, origin);
 
     return response;

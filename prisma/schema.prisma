@@ -58,3 +58,128 @@ model RolePermission {
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 }
+
+// Spa & Salon Business Models
+
+model Employee {
+  id          Int           @id @default(autoincrement())
+  name        String
+  email       String        @unique
+  phone       String?
+  position    String        // therapist, receptionist, manager, etc
+  salary      Decimal       @db.Decimal(10, 2)
+  commission  Decimal?      @db.Decimal(5, 2) // percentage
+  avatar      String?       @db.Text
+  isActive    Boolean       @default(true)
+  hireDate    DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  appointments Appointment[]
+  payrolls    Payroll[]
+}
+
+model Customer {
+  id          Int           @id @default(autoincrement())
+  name        String
+  email       String?       @unique
+  phone       String
+  address     String?       @db.Text
+  birthDate   DateTime?
+  gender      Gender?
+  notes       String?       @db.Text
+  avatar      String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  appointments Appointment[]
+}
+
+model Service {
+  id          Int                @id @default(autoincrement())
+  name        String
+  description String?            @db.Text
+  price       Decimal            @db.Decimal(10, 2)
+  duration    Int                // in minutes
+  category    ServiceCategory
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  appointmentServices AppointmentService[]
+}
+
+model Appointment {
+  id          Int                @id @default(autoincrement())
+  customerId  Int
+  employeeId  Int
+  date        DateTime
+  startTime   DateTime
+  endTime     DateTime
+  status      AppointmentStatus  @default(SCHEDULED)
+  totalPrice  Decimal            @db.Decimal(10, 2)
+  notes       String?            @db.Text
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  customer    Customer           @relation(fields: [customerId], references: [id])
+  employee    Employee           @relation(fields: [employeeId], references: [id])
+  services    AppointmentService[]
+}
+
+model AppointmentService {
+  id            Int         @id @default(autoincrement())
+  appointmentId Int
+  serviceId     Int
+  price         Decimal     @db.Decimal(10, 2)
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service       Service     @relation(fields: [serviceId], references: [id])
+}
+
+model Payroll {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  month       Int      // 1-12
+  year        Int
+  baseSalary  Decimal  @db.Decimal(10, 2)
+  commission  Decimal  @db.Decimal(10, 2) @default(0)
+  bonus       Decimal  @db.Decimal(10, 2) @default(0)
+  deduction   Decimal  @db.Decimal(10, 2) @default(0)
+  totalSalary Decimal  @db.Decimal(10, 2)
+  paidAt      DateTime?
+  status      PayrollStatus @default(PENDING)
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  employee    Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month, year])
+}
+
+// Enums
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum ServiceCategory {
+  FACIAL
+  MASSAGE
+  BODY_TREATMENT
+  HAIR_TREATMENT
+  NAIL_CARE
+  MAKEUP
+  WAXING
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PayrollStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
