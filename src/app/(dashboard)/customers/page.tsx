@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+
+import Swal from "sweetalert2";
+
 import {
   Box,
   Typography,
@@ -29,6 +32,8 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete, Person, Email, Phone, LocationOn, Cake } from "@mui/icons-material";
 
+import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
+
 interface Customer {
   id: number;
   name: string;
@@ -47,6 +52,7 @@ export default function CustomerPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -131,6 +137,7 @@ export default function CustomerPage() {
         notes: ""
       });
     }
+
     setDialogOpen(true);
   };
 
@@ -154,22 +161,28 @@ export default function CustomerPage() {
       console.log("Saving customer:", formData);
       await fetchCustomers();
       handleCloseDialog();
+
       // TODO: Show success toast
     } catch (error) {
       console.error("Error saving customer:", error);
+
       // TODO: Show error toast
     }
   };
 
   const handleDelete = async (customer: Customer) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus customer "${customer.name}"?`)) {
+    const result = await Swal.fire(confirmDialog.delete(`customer "${customer.name}"`));
+
+    if (result.isConfirmed) {
       try {
         // TODO: Implement API call to delete customer
         console.log("Deleting customer:", customer.id);
         await fetchCustomers();
-        // TODO: Show success toast
+
+        Swal.fire(successAlert.timer("Customer berhasil dihapus!"));
       } catch (error) {
         console.error("Error deleting customer:", error);
+        Swal.fire(errorAlert.network());
       }
     }
   };

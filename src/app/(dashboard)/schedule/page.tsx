@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+
+import Swal from "sweetalert2";
+
 import {
   Box,
   Typography,
@@ -40,6 +43,8 @@ import {
   Cancel,
   Schedule as ScheduleIcon
 } from "@mui/icons-material";
+
+import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
 
 interface Appointment {
   id: number;
@@ -167,6 +172,7 @@ export default function JadwalPage() {
         notes: ""
       });
     }
+
     setDialogOpen(true);
   };
 
@@ -190,9 +196,11 @@ export default function JadwalPage() {
       console.log("Saving appointment:", formData);
       await fetchAppointments();
       handleCloseDialog();
+
       // TODO: Show success toast
     } catch (error) {
       console.error("Error saving appointment:", error);
+
       // TODO: Show error toast
     }
   };
@@ -202,6 +210,7 @@ export default function JadwalPage() {
       // TODO: Implement API call to update appointment status
       console.log("Updating appointment status:", appointment.id, newStatus);
       await fetchAppointments();
+
       // TODO: Show success toast
     } catch (error) {
       console.error("Error updating appointment status:", error);
@@ -209,14 +218,18 @@ export default function JadwalPage() {
   };
 
   const handleDelete = async (appointment: Appointment) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus appointment "${appointment.customerName}"?`)) {
+    const result = await Swal.fire(confirmDialog.delete(`appointment "${appointment.customerName}"`));
+
+    if (result.isConfirmed) {
       try {
         // TODO: Implement API call to delete appointment
         console.log("Deleting appointment:", appointment.id);
         await fetchAppointments();
-        // TODO: Show success toast
+
+        Swal.fire(successAlert.timer("Appointment berhasil dihapus!"));
       } catch (error) {
         console.error("Error deleting appointment:", error);
+        Swal.fire(errorAlert.network());
       }
     }
   };
@@ -235,11 +248,13 @@ export default function JadwalPage() {
 
   const getTodayAppointments = () => {
     const today = new Date().toISOString().split("T")[0];
+
     return appointments.filter((apt) => apt.date === today);
   };
 
   const getUpcomingAppointments = () => {
     const today = new Date().toISOString().split("T")[0];
+
     return appointments.filter((apt) => apt.date > today);
   };
 

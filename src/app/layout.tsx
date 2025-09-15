@@ -8,14 +8,14 @@ import type { ChildrenType } from "@core/types";
 
 // Style Imports
 import "@/app/globals.css";
+import "@/styles/sweetalert.css";
 
 // Generated Icon CSS Imports
 import "@assets/iconify-icons/generated-icons.css";
 
 export const metadata: Metadata = {
-  title: "Vuexy - MUI Next.js Admin Dashboard Template",
-  description:
-    "Vuexy - MUI Next.js Admin Dashboard Template - is the most developer friendly & highly customizable Admin Dashboard Template based on MUI v5.",
+  title: "Kalimasada - Spa & Salon Management System",
+  description: "Kalimasada - Spa & Salon Management System",
   icons: {
     icon: "/logo.svg"
   }

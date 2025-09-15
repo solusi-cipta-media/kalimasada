@@ -22,6 +22,7 @@ export default class PayrollRepository {
 
   async getByEmployee(employeeId: number, year?: number) {
     const whereClause: any = { employeeId };
+
     if (year) {
       whereClause.year = year;
     }
@@ -63,21 +64,41 @@ export default class PayrollRepository {
     });
   }
 
-  async generatePayroll(year: number, month: number) {
+  async generatePayroll(year: number, month: number, generatedBy: number) {
     const employees = await database.employee.findMany({
       where: { isActive: true }
     });
 
+    // Check if generation already exists for this period
+    const existingGeneration = await database.payrollGeneration.findUnique({
+      where: {
+        month_year: {
+          month,
+          year
+        }
+      }
+    });
+
+    if (existingGeneration) {
+      throw new Error(`Payroll generation for ${month}/${year} already exists`);
+    }
+
     const results = [];
+    let totalAmount = 0;
+
+    // Create the generation record first
+    const generation = await database.payrollGeneration.create({
+      data: {
+        month,
+        year,
+        generatedBy,
+        employeeCount: 0, // Will update later
+        totalAmount: 0, // Will update later
+        status: "IN_PROGRESS"
+      }
+    });
 
     for (const employee of employees) {
-      // Check if payroll already exists
-      const existing = await this.getEmployeePayroll(employee.id, year, month);
-      if (existing) {
-        results.push({ employee, payroll: existing, status: "already_exists" });
-        continue;
-      }
-
       // Calculate commission from completed appointments
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
@@ -94,9 +115,7 @@ export default class PayrollRepository {
       });
 
       const totalRevenue = appointments.reduce((sum, apt) => sum + Number(apt.totalPrice), 0);
-
       const commissionAmount = (totalRevenue * Number(employee.commission || 0)) / 100;
-
       const totalSalary = Number(employee.salary) + commissionAmount;
 
       const payroll = await database.payroll.create({
@@ -108,17 +127,29 @@ export default class PayrollRepository {
           commission: commissionAmount,
           bonus: 0,
           deduction: 0,
-          totalSalary
+          totalSalary,
+          generationId: generation.id
         },
         include: {
           employee: true
         }
       });
 
+      totalAmount += totalSalary;
       results.push({ employee, payroll, status: "created" });
     }
 
-    return results;
+    // Update the generation record with final counts
+    await database.payrollGeneration.update({
+      where: { id: generation.id },
+      data: {
+        employeeCount: results.length,
+        totalAmount,
+        status: "COMPLETED"
+      }
+    });
+
+    return { generation, payrolls: results };
   }
 
   async update(
@@ -134,6 +165,7 @@ export default class PayrollRepository {
     }
   ) {
     const payroll = await this.getById(id);
+
     if (!payroll) throw new Error("Payroll not found");
 
     const updatedData: any = { ...data };
@@ -186,6 +218,7 @@ export default class PayrollRepository {
 
   async getPayrollSummary(year: number, month?: number) {
     const whereClause: any = { year };
+
     if (month) {
       whereClause.month = month;
     }

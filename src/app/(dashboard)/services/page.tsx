@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+
+import Swal from "sweetalert2";
+
 import {
   Box,
   Typography,
@@ -31,6 +34,8 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete, Visibility, VisibilityOff } from "@mui/icons-material";
 
+import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
+
 interface Service {
   id: number;
   name: string;
@@ -57,6 +62,7 @@ export default function LayananPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -79,6 +85,7 @@ export default function LayananPage() {
       } else {
         console.error("Error fetching services:", result.message);
       }
+
       setLoading(false);
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -106,6 +113,7 @@ export default function LayananPage() {
         category: ""
       });
     }
+
     setDialogOpen(true);
   };
 
@@ -145,13 +153,16 @@ export default function LayananPage() {
       if (response.ok) {
         await fetchServices();
         handleCloseDialog();
+
         // TODO: Show success toast
       } else {
         console.error("Error saving service:", result.message);
+
         // TODO: Show error toast
       }
     } catch (error) {
       console.error("Error saving service:", error);
+
       // TODO: Show error toast
     }
   };
@@ -170,9 +181,11 @@ export default function LayananPage() {
 
       if (response.ok) {
         await fetchServices();
+
         // TODO: Show success toast
       } else {
         console.error("Error toggling service status");
+
         // TODO: Show error toast
       }
     } catch (error) {
@@ -181,7 +194,9 @@ export default function LayananPage() {
   };
 
   const handleDelete = async (service: Service) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus layanan "${service.name}"?`)) {
+    const result = await Swal.fire(confirmDialog.delete(`layanan "${service.name}"`));
+
+    if (result.isConfirmed) {
       try {
         const response = await fetch(`/api/services/${service.id}`, {
           method: "DELETE"
@@ -189,13 +204,15 @@ export default function LayananPage() {
 
         if (response.ok) {
           await fetchServices();
-          // TODO: Show success toast
+
+          Swal.fire(successAlert.timer("Layanan berhasil dihapus!"));
         } else {
           console.error("Error deleting service");
-          // TODO: Show error toast
+          Swal.fire(errorAlert.simple("Terjadi kesalahan saat menghapus layanan"));
         }
       } catch (error) {
         console.error("Error deleting service:", error);
+        Swal.fire(errorAlert.network());
       }
     }
   };
@@ -215,11 +232,13 @@ export default function LayananPage() {
     if (hours > 0) {
       return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
     }
+
     return `${mins}m`;
   };
 
   const getCategoryLabel = (category: string) => {
     const found = serviceCategories.find((cat) => cat.value === category);
+
     return found ? found.label : category;
   };
 
@@ -234,6 +253,7 @@ export default function LayananPage() {
       WAXING: "default",
       OTHER: "default"
     };
+
     return colors[category] || "default";
   };
 

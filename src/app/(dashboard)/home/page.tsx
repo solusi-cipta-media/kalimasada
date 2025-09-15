@@ -30,7 +30,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Legend
 } from "recharts";
@@ -266,6 +266,7 @@ export default function BerandaPage() {
     }).format(amount);
   };
 
+  // Create drag and drop cards configuration
   const StatCard = ({
     title,
     value,
@@ -303,15 +304,34 @@ export default function BerandaPage() {
   }
 
   return (
-    <Box p={3}>
-      <Typography variant='h4' component='h1' gutterBottom>
+    <Box p={{ xs: 2, md: 3 }}>
+      <Typography
+        variant='h4'
+        component='h1'
+        gutterBottom
+        sx={{
+          fontSize: { xs: "1.5rem", md: "2.125rem" },
+          marginBottom: { xs: 1, sm: 2 }
+        }}
+      >
         Dashboard Kalimasada Spa & Salon
       </Typography>
 
       {/* Date Filter */}
-      <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
-        <Box display='flex' alignItems='center' gap={2}>
-          <Typography variant='h6' component='span'>
+      <Paper elevation={1} sx={{ p: { xs: 1.5, md: 2 }, mb: 3 }}>
+        <Box
+          display='flex'
+          flexDirection={{ xs: "column", sm: "row" }}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={2}
+        >
+          <Typography
+            variant='h6'
+            component='span'
+            sx={{
+              fontSize: { xs: "1rem", md: "1.25rem" }
+            }}
+          >
             Filter Tanggal:
           </Typography>
           <TextField
@@ -326,9 +346,16 @@ export default function BerandaPage() {
                 </InputAdornment>
               )
             }}
-            sx={{ minWidth: 200 }}
+            sx={{ minWidth: { xs: "100%", sm: 200 } }}
           />
-          <Typography variant='body2' color='textSecondary'>
+          <Typography
+            variant='body2'
+            color='textSecondary'
+            sx={{
+              fontSize: { xs: "0.75rem", md: "0.875rem" },
+              lineHeight: 1.4
+            }}
+          >
             Data untuk:{" "}
             {new Date(selectedDate).toLocaleDateString("id-ID", {
               weekday: "long",
@@ -346,7 +373,7 @@ export default function BerandaPage() {
       </Paper>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} mb={4}>
+      <Grid container spacing={{ xs: 2, md: 3 }} mb={4}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title='Appointment Hari Ini'
@@ -382,7 +409,7 @@ export default function BerandaPage() {
       </Grid>
 
       {/* Charts Section */}
-      <Grid container spacing={3} mb={4}>
+      <Grid container spacing={{ xs: 2, md: 3 }} mb={4}>
         {/* Revenue Chart */}
         <Grid item xs={12} md={8}>
           <Card>
@@ -390,21 +417,23 @@ export default function BerandaPage() {
               <Typography variant='h6' gutterBottom>
                 Pendapatan 6 Bulan Terakhir
               </Typography>
-              <ResponsiveContainer width='100%' height={300}>
-                <AreaChart data={stats.revenueData}>
-                  <CartesianGrid strokeDasharray='3 3' />
-                  <XAxis dataKey='name' />
-                  <YAxis tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`} />
-                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Pendapatan"]} />
-                  <Area
-                    type='monotone'
-                    dataKey='revenue'
-                    stroke={theme.palette.primary.main}
-                    fill={theme.palette.primary.main}
-                    fillOpacity={0.3}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <Box sx={{ height: { xs: 250, md: 300 } }}>
+                <ResponsiveContainer width='100%' height='100%'>
+                  <AreaChart data={stats.revenueData}>
+                    <CartesianGrid strokeDasharray='3 3' />
+                    <XAxis dataKey='name' />
+                    <YAxis tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`} />
+                    <RechartsTooltip formatter={(value) => [formatCurrency(Number(value)), "Pendapatan"]} />
+                    <Area
+                      type='monotone'
+                      dataKey='revenue'
+                      stroke={theme.palette.primary.main}
+                      fill={theme.palette.primary.main}
+                      fillOpacity={0.3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -416,59 +445,70 @@ export default function BerandaPage() {
               <Typography variant='h6' gutterBottom>
                 Distribusi Layanan
               </Typography>
-              <ResponsiveContainer width='100%' height={300}>
-                <PieChart>
-                  <Pie
-                    data={stats.serviceDistribution}
-                    cx='50%'
-                    cy='50%'
-                    outerRadius={80}
-                    dataKey='value'
-                    label={({ name, value }) => `${name}: ${value}%`}
-                  >
-                    {stats.serviceDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value}%`, "Persentase"]} />
-                </PieChart>
-              </ResponsiveContainer>
+              <Box sx={{ height: { xs: 250, md: 300 } }}>
+                <ResponsiveContainer width='100%' height='100%'>
+                  <PieChart>
+                    <Pie
+                      data={stats.serviceDistribution}
+                      cx='50%'
+                      cy='50%'
+                      outerRadius={80}
+                      dataKey='value'
+                      label={({ name, value }) => `${name}: ${value}%`}
+                    >
+                      {stats.serviceDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip formatter={(value) => [`${value}%`, "Persentase"]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
       {/* Daily Activity Services Chart */}
-      <Grid container spacing={3} mb={4}>
+      <Grid container spacing={{ xs: 2, md: 3 }} mb={4}>
         <Grid item xs={12}>
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
                 Daily Activity Services - Service at Home vs Service at Location
               </Typography>
-              <ResponsiveContainer width='100%' height={400}>
-                <BarChart data={stats.dailyActivityData}>
-                  <CartesianGrid strokeDasharray='3 3' />
-                  <XAxis dataKey='time' />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey='Service at Home' stackId='a' fill={theme.palette.primary.main} name='Service at Home' />
-                  <Bar
-                    dataKey='Service at Location'
-                    stackId='a'
-                    fill={theme.palette.secondary.main}
-                    name='Service at Location'
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <Box sx={{ height: { xs: 300, md: 400 } }}>
+                <ResponsiveContainer width='100%' height='100%'>
+                  <BarChart data={stats.dailyActivityData} barSize={30}>
+                    <CartesianGrid strokeDasharray='3 3' />
+                    <XAxis dataKey='time' />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <Legend />
+                    <Bar
+                      dataKey='Service at Home'
+                      stackId='a'
+                      fill={theme.palette.primary.main}
+                      name='Service at Home'
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey='Service at Location'
+                      stackId='a'
+                      fill={theme.palette.secondary.main}
+                      name='Service at Location'
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
       {/* Bottom Section */}
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, md: 3 }}>
         <Grid item xs={12} md={8}>
           <Card>
             <CardContent>
@@ -553,104 +593,113 @@ export default function BerandaPage() {
       </Grid>
 
       {/* Top 5 Best Seller Services and Top 5 Workload Employees */}
-      <Grid container spacing={3} mb={4}>
-        {/* Top 5 Best Seller Services */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant='h6' gutterBottom>
-                Top 5 Best Seller Services
-              </Typography>
-              <List>
-                {stats.topServices.map((service, index) => (
-                  <ListItem key={service.id} divider>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: theme.palette.primary.main }}>{index + 1}</Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box display='flex' alignItems='center' gap={1}>
-                          <Typography variant='body1' component='span'>
-                            {service.icon}
-                          </Typography>
-                          <Typography variant='subtitle1' component='span'>
-                            {service.name}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <Box display='flex' justifyContent='space-between' mt={0.5}>
-                          <Typography variant='body2' color='textSecondary'>
-                            {service.bookings} bookings
-                          </Typography>
-                          <Typography variant='body2' color='primary.main' fontWeight='bold'>
-                            {formatCurrency(service.revenue)}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Top 5 Workload Employees */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant='h6' gutterBottom>
-                Top 5 Workload Employees
-              </Typography>
-              <List>
-                {stats.topEmployees.map((employee) => (
-                  <ListItem key={employee.id} divider>
-                    <ListItemAvatar>
-                      <Avatar src={employee.avatar} alt={employee.name}>
-                        {employee.name
-                          .split(" ")
-                          .map((n: string) => n[0])
-                          .join("")}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box display='flex' alignItems='center' justifyContent='space-between'>
-                          <Box>
-                            <Typography variant='subtitle1'>{employee.name}</Typography>
+      <Box mt={8} mb={8}>
+        <Typography variant='h5' component='h2' gutterBottom sx={{ mb: 4, fontWeight: "bold", textAlign: "center" }}>
+          Top Performance Analytics
+        </Typography>
+        <Grid container spacing={5}>
+          {/* Top 5 Best Seller Services */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: "100%", boxShadow: 4, borderRadius: 3 }}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant='h6' gutterBottom sx={{ mb: 4, fontWeight: "bold", color: "primary.main" }}>
+                  🏆 Top 5 Best Seller Services
+                </Typography>
+                <List sx={{ p: 0 }}>
+                  {stats.topServices.map((service, index) => (
+                    <ListItem key={service.id} divider sx={{ py: 2, px: 1 }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 48, height: 48 }}>{index + 1}</Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        sx={{ ml: 2 }}
+                        primary={
+                          <Box display='flex' alignItems='center' gap={1}>
+                            <Typography variant='body1' component='span'>
+                              {service.icon}
+                            </Typography>
+                            <Typography variant='subtitle1' component='span' fontWeight='bold'>
+                              {service.name}
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
+                          <Box display='flex' justifyContent='space-between' mt={1}>
                             <Typography variant='body2' color='textSecondary'>
-                              {employee.position}
+                              {service.bookings} bookings
+                            </Typography>
+                            <Typography variant='body2' color='primary.main' fontWeight='bold'>
+                              {formatCurrency(service.revenue)}
                             </Typography>
                           </Box>
-                          <Box textAlign='right'>
-                            <Typography variant='h6' color='primary.main'>
-                              {employee.workload}
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Top 5 Workload Employees */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: "100%", boxShadow: 4, borderRadius: 3 }}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant='h6' gutterBottom sx={{ mb: 4, fontWeight: "bold", color: "secondary.main" }}>
+                  👨‍💼 Top 5 Workload Employees
+                </Typography>
+                <List sx={{ p: 0 }}>
+                  {stats.topEmployees.map((employee) => (
+                    <ListItem key={employee.id} divider sx={{ py: 2, px: 1 }}>
+                      <ListItemAvatar>
+                        <Avatar src={employee.avatar} alt={employee.name} sx={{ width: 48, height: 48 }}>
+                          {employee.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        sx={{ ml: 2 }}
+                        primary={
+                          <Box display='flex' alignItems='center' justifyContent='space-between'>
+                            <Box>
+                              <Typography variant='subtitle1' fontWeight='bold'>
+                                {employee.name}
+                              </Typography>
+                              <Typography variant='body2' color='textSecondary'>
+                                {employee.position}
+                              </Typography>
+                            </Box>
+                            <Box textAlign='right'>
+                              <Typography variant='h6' color='primary.main' fontWeight='bold'>
+                                {employee.workload}
+                              </Typography>
+                              <Typography variant='caption' color='textSecondary'>
+                                appointments
+                              </Typography>
+                            </Box>
+                          </Box>
+                        }
+                        secondary={
+                          <Box display='flex' alignItems='center' gap={0.5} mt={1}>
+                            <Typography variant='body2' color='textSecondary'>
+                              Rating:
                             </Typography>
-                            <Typography variant='caption' color='textSecondary'>
-                              appointments
+                            <Typography variant='body2' color='warning.main' fontWeight='bold'>
+                              ⭐ {employee.rating}
                             </Typography>
                           </Box>
-                        </Box>
-                      }
-                      secondary={
-                        <Box display='flex' alignItems='center' gap={0.5} mt={0.5}>
-                          <Typography variant='body2' color='textSecondary'>
-                            Rating:
-                          </Typography>
-                          <Typography variant='body2' color='warning.main' fontWeight='bold'>
-                            ⭐ {employee.rating}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
     </Box>
   );
 }

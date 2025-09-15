@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+
+import Swal from "sweetalert2";
+
 import {
   Box,
   Typography,
@@ -28,6 +31,8 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete, Person, Email, Phone } from "@mui/icons-material";
 
+import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
+
 interface Employee {
   id: number;
   name: string;
@@ -46,6 +51,7 @@ export default function KaryawanPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -127,6 +133,7 @@ export default function KaryawanPage() {
         commission: ""
       });
     }
+
     setDialogOpen(true);
   };
 
@@ -149,9 +156,11 @@ export default function KaryawanPage() {
       console.log("Saving employee:", formData);
       await fetchEmployees();
       handleCloseDialog();
+
       // TODO: Show success toast
     } catch (error) {
       console.error("Error saving employee:", error);
+
       // TODO: Show error toast
     }
   };
@@ -161,6 +170,7 @@ export default function KaryawanPage() {
       // TODO: Implement API call to toggle employee status
       console.log("Toggling employee status:", employee.id);
       await fetchEmployees();
+
       // TODO: Show success toast
     } catch (error) {
       console.error("Error toggling employee status:", error);
@@ -168,14 +178,18 @@ export default function KaryawanPage() {
   };
 
   const handleDelete = async (employee: Employee) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus karyawan "${employee.name}"?`)) {
+    const result = await Swal.fire(confirmDialog.delete(`karyawan "${employee.name}"`));
+
+    if (result.isConfirmed) {
       try {
         // TODO: Implement API call to delete employee
         console.log("Deleting employee:", employee.id);
         await fetchEmployees();
-        // TODO: Show success toast
+
+        Swal.fire(successAlert.timer("Karyawan berhasil dihapus!"));
       } catch (error) {
         console.error("Error deleting employee:", error);
+        Swal.fire(errorAlert.network());
       }
     }
   };
@@ -205,6 +219,7 @@ export default function KaryawanPage() {
       "Nail Technician": "info",
       Manager: "error"
     };
+
     return colors[position] || "default";
   };
 

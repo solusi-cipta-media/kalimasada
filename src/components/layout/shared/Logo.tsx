@@ -5,13 +5,15 @@ import { useEffect, useRef } from "react";
 
 // Next Imports
 // import Img from 'next/image'
-import Link from "next/link";
+// Next Imports
 import Image from "next/image";
 
 // Third-party Imports
 import styled from "@emotion/styled";
 
 import { Grid, Typography } from "@mui/material";
+
+import Link from "@components/Link";
 
 // Type Imports
 import type { VerticalNavContextProps } from "@menu/contexts/verticalNavContext";

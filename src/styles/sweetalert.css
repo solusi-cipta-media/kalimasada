@@ -1,0 +1,96 @@
+/* SweetAlert2 Custom Styles */
+.swal2-popup {
+  border-radius: 12px;
+  font-family: "Inter", "Public Sans", sans-serif;
+}
+
+.swal2-title {
+  font-weight: 600;
+  color: rgba(76, 78, 100, 0.87);
+}
+
+.swal2-content {
+  color: rgba(76, 78, 100, 0.68);
+  font-size: 0.9rem;
+}
+
+.swal2-confirm {
+  background-color: #7367f0 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  padding: 8px 24px !important;
+  font-size: 0.875rem !important;
+}
+
+.swal2-confirm:focus {
+  box-shadow: 0 0 0 0.2rem rgba(115, 103, 240, 0.25) !important;
+}
+
+.swal2-cancel {
+  background-color: rgba(76, 78, 100, 0.12) !important;
+  color: rgba(76, 78, 100, 0.87) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  padding: 8px 24px !important;
+  font-size: 0.875rem !important;
+}
+
+.swal2-cancel:focus {
+  box-shadow: 0 0 0 0.2rem rgba(76, 78, 100, 0.15) !important;
+}
+
+.swal2-cancel:hover {
+  background-color: rgba(76, 78, 100, 0.16) !important;
+}
+
+.swal2-icon.swal2-warning {
+  border-color: #ff9f43;
+  color: #ff9f43;
+}
+
+.swal2-icon.swal2-error {
+  border-color: #ea5455;
+  color: #ea5455;
+}
+
+.swal2-icon.swal2-success {
+  border-color: #28c76f;
+  color: #28c76f;
+}
+
+.swal2-icon.swal2-info {
+  border-color: #00cfe8;
+  color: #00cfe8;
+}
+
+.swal2-icon.swal2-question {
+  border-color: #7367f0;
+  color: #7367f0;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .swal2-popup {
+    background-color: #2b2c40;
+    color: rgba(231, 227, 252, 0.87);
+  }
+
+  .swal2-title {
+    color: rgba(231, 227, 252, 0.87);
+  }
+
+  .swal2-content {
+    color: rgba(231, 227, 252, 0.68);
+  }
+
+  .swal2-cancel {
+    background-color: rgba(231, 227, 252, 0.12) !important;
+    color: rgba(231, 227, 252, 0.87) !important;
+  }
+
+  .swal2-cancel:hover {
+    background-color: rgba(231, 227, 252, 0.16) !important;
+  }
+}

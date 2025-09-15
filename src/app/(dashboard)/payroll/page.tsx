@@ -1,5 +1,9 @@
 "use client";
+
 import { useEffect, useState } from "react";
+
+import Swal from "sweetalert2";
+
 import {
   Box,
   Typography,
@@ -18,7 +22,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  InputAdornment,
   Table,
   TableBody,
   TableCell,
@@ -27,18 +30,49 @@ import {
   TableRow,
   Paper,
   Avatar,
-  Tabs,
-  Tab,
-  Alert
+  Alert,
+  CircularProgress,
+  Divider,
+  Container
 } from "@mui/material";
-import { Add, Edit, Delete, Person, AttachMoney, TrendingUp, Receipt, CheckCircle, Pending } from "@mui/icons-material";
+import {
+  Add,
+  Person,
+  AttachMoney,
+  Receipt,
+  CheckCircle,
+  Pending,
+  People,
+  Visibility,
+  Delete,
+  CalendarToday,
+  Payment,
+  Paid
+} from "@mui/icons-material";
 
-interface Payroll {
+import { confirmDialog, successAlert, errorAlert, swalConfig } from "@/utils/sweetAlert";
+
+interface PayrollGeneration {
   id: number;
-  employeeName: string;
-  employeePosition: string;
   month: number;
   year: number;
+  generatedByUser: {
+    id: number;
+    fullName: string;
+    email: string;
+  };
+  employeeCount: number;
+  totalAmount: number;
+  status: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  payrolls?: PayrollDetail[];
+}
+
+interface PayrollDetail {
+  id: number;
+  employeeId: number;
   baseSalary: number;
   commission: number;
   bonus: number;
@@ -46,213 +80,274 @@ interface Payroll {
   totalSalary: number;
   status: "PENDING" | "PAID" | "CANCELLED";
   paidAt?: string;
-  notes?: string;
+  employee: {
+    id: number;
+    name: string;
+    position: string;
+    avatar?: string;
+  };
 }
 
-const monthNames = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember"
-];
-
-export default function GajiPage() {
-  const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+const PayrollPage = () => {
+  const [generations, setGenerations] = useState<PayrollGeneration[]>([]);
+  const [selectedGeneration, setSelectedGeneration] = useState<PayrollGeneration | null>(null);
   const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
-  const [editingPayroll, setEditingPayroll] = useState<Payroll | null>(null);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [tabValue, setTabValue] = useState(0);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   const [formData, setFormData] = useState({
-    employeeId: "",
     month: "",
-    year: "",
-    baseSalary: "",
-    commission: "",
-    bonus: "",
-    deduction: "",
-    notes: ""
+    year: ""
   });
 
-  const [generateData, setGenerateData] = useState({
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear()
-  });
+  const [generating, setGenerating] = useState(false);
+  const [payingAll, setPayingAll] = useState(false);
+  const [payingIndividual, setPayingIndividual] = useState<number | null>(null);
+
+  const monthNames = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember"
+  ];
 
   useEffect(() => {
-    fetchPayrolls();
-  }, [selectedYear, selectedMonth]);
+    fetchGenerations();
+  }, []);
 
-  const fetchPayrolls = async () => {
+  const fetchGenerations = async () => {
     try {
-      // TODO: Implement API call to fetch payrolls
-      // For now, using mock data
-      setPayrolls([
-        {
-          id: 1,
-          employeeName: "Sari Dewi",
-          employeePosition: "Senior Therapist",
-          month: 9,
-          year: 2024,
-          baseSalary: 4500000,
-          commission: 450000,
-          bonus: 0,
-          deduction: 0,
-          totalSalary: 4950000,
-          status: "PAID",
-          paidAt: "2024-09-05"
-        },
-        {
-          id: 2,
-          employeeName: "Made Wirawan",
-          employeePosition: "Massage Therapist",
-          month: 9,
-          year: 2024,
-          baseSalary: 3500000,
-          commission: 280000,
-          bonus: 100000,
-          deduction: 0,
-          totalSalary: 3880000,
-          status: "PAID",
-          paidAt: "2024-09-05"
-        },
-        {
-          id: 3,
-          employeeName: "Kadek Ayu",
-          employeePosition: "Facial Specialist",
-          month: 9,
-          year: 2024,
-          baseSalary: 4000000,
-          commission: 480000,
-          bonus: 0,
-          deduction: 50000,
-          totalSalary: 4430000,
-          status: "PENDING"
-        },
-        {
-          id: 4,
-          employeeName: "Wayan Suarta",
-          employeePosition: "Receptionist",
-          month: 9,
-          year: 2024,
-          baseSalary: 3000000,
-          commission: 0,
-          bonus: 50000,
-          deduction: 0,
-          totalSalary: 3050000,
-          status: "PENDING"
-        }
-      ]);
-      setLoading(false);
+      setLoading(true);
+      const response = await fetch("/api/payroll/generation");
+      const result = await response.json();
+
+      if (response.ok) {
+        setGenerations(result.data || []);
+      } else {
+        console.error("Error fetching generations:", result.message);
+      }
     } catch (error) {
-      console.error("Error fetching payrolls:", error);
+      console.error("Error fetching generations:", error);
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenDialog = (payroll?: Payroll) => {
-    if (payroll) {
-      setEditingPayroll(payroll);
-      setFormData({
-        employeeId: "1", // TODO: Get actual employee ID
-        month: payroll.month.toString(),
-        year: payroll.year.toString(),
-        baseSalary: payroll.baseSalary.toString(),
-        commission: payroll.commission.toString(),
-        bonus: payroll.bonus.toString(),
-        deduction: payroll.deduction.toString(),
-        notes: payroll.notes || ""
-      });
-    } else {
-      setEditingPayroll(null);
-      setFormData({
-        employeeId: "",
-        month: selectedMonth.toString(),
-        year: selectedYear.toString(),
-        baseSalary: "",
-        commission: "",
-        bonus: "",
-        deduction: "",
-        notes: ""
-      });
+  const fetchGenerationDetails = async (id: number) => {
+    try {
+      setDetailLoading(true);
+
+      const response = await fetch(`/api/payroll/generation/${id}`);
+      const result = await response.json();
+
+      if (response.ok) {
+        setSelectedGeneration(result.data);
+        setDetailDialogOpen(true);
+      } else {
+        console.error("Error fetching generation details:", result.message);
+      }
+    } catch (error) {
+      console.error("Error fetching generation details:", error);
+    } finally {
+      setDetailLoading(false);
     }
+  };
+
+  const handleOpenDialog = () => {
+    const currentDate = new Date();
+
+    setFormData({
+      month: (currentDate.getMonth() + 1).toString(),
+      year: currentDate.getFullYear().toString()
+    });
     setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setEditingPayroll(null);
-    setFormData({
-      employeeId: "",
-      month: "",
-      year: "",
-      baseSalary: "",
-      commission: "",
-      bonus: "",
-      deduction: "",
-      notes: ""
-    });
+    setFormData({ month: "", year: "" });
+  };
+
+  const handleCloseDetailDialog = () => {
+    setDetailDialogOpen(false);
+    setSelectedGeneration(null);
   };
 
   const handleSubmit = async () => {
-    try {
-      // TODO: Implement API call to save payroll
-      console.log("Saving payroll:", formData);
-      await fetchPayrolls();
-      handleCloseDialog();
-      // TODO: Show success toast
-    } catch (error) {
-      console.error("Error saving payroll:", error);
-      // TODO: Show error toast
-    }
-  };
+    const monthName = monthNames[Number(formData.month) - 1];
+    const result = await Swal.fire(confirmDialog.generate(`gaji bulan ${monthName} ${formData.year}`));
 
-  const handleGeneratePayroll = async () => {
-    try {
-      // TODO: Implement API call to generate payroll for all employees
-      console.log("Generating payroll for:", generateData);
-      await fetchPayrolls();
-      setGenerateDialogOpen(false);
-      // TODO: Show success toast
-    } catch (error) {
-      console.error("Error generating payroll:", error);
-      // TODO: Show error toast
-    }
-  };
-
-  const handleMarkAsPaid = async (payroll: Payroll) => {
-    if (window.confirm(`Apakah Anda yakin ingin menandai gaji "${payroll.employeeName}" sebagai sudah dibayar?`)) {
+    if (result.isConfirmed) {
       try {
-        // TODO: Implement API call to mark payroll as paid
-        console.log("Marking payroll as paid:", payroll.id);
-        await fetchPayrolls();
-        // TODO: Show success toast
+        setGenerating(true);
+
+        const response = await fetch("/api/payroll/generation", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            month: Number(formData.month),
+            year: Number(formData.year)
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          await fetchGenerations();
+          handleCloseDialog();
+
+          // Show success message
+          Swal.fire(successAlert.timer(result.message || "Gaji berhasil digenerate!"));
+        } else {
+          console.error("Error generating payroll:", result.message);
+          Swal.fire(errorAlert.simple(result.message || "Terjadi kesalahan saat generate gaji"));
+        }
       } catch (error) {
-        console.error("Error marking payroll as paid:", error);
+        console.error("Error generating payroll:", error);
+        Swal.fire(errorAlert.network());
+      } finally {
+        setGenerating(false);
       }
     }
   };
 
-  const handleDelete = async (payroll: Payroll) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus data gaji "${payroll.employeeName}"?`)) {
+  const handleDelete = async (generation: PayrollGeneration) => {
+    const monthName = monthNames[generation.month - 1];
+    const result = await Swal.fire(confirmDialog.delete(`gaji bulan ${monthName} ${generation.year}`));
+
+    if (result.isConfirmed) {
       try {
-        // TODO: Implement API call to delete payroll
-        console.log("Deleting payroll:", payroll.id);
-        await fetchPayrolls();
-        // TODO: Show success toast
+        const response = await fetch(`/api/payroll/generation/${generation.id}`, {
+          method: "DELETE"
+        });
+
+        if (response.ok) {
+          await fetchGenerations();
+
+          // Show success message
+          Swal.fire(successAlert.timer("Data gaji berhasil dihapus!"));
+        } else {
+          Swal.fire(errorAlert.simple("Terjadi kesalahan saat menghapus data"));
+        }
       } catch (error) {
-        console.error("Error deleting payroll:", error);
+        console.error("Error deleting generation:", error);
+        Swal.fire(errorAlert.network());
+      }
+    }
+  };
+
+  const handlePayIndividual = async (payrollId: number) => {
+    // Find the payroll details for confirmation
+    const payroll = selectedGeneration?.payrolls?.find((p) => p.id === payrollId);
+    const employeeName = payroll?.employee?.name || "";
+    const amount = payroll ? formatCurrency(payroll.totalSalary) : "";
+
+    const result = await Swal.fire(confirmDialog.payment(amount, employeeName));
+
+    if (result.isConfirmed) {
+      try {
+        setPayingIndividual(payrollId);
+
+        const response = await fetch(`/api/payroll/${payrollId}/pay`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Refresh the generation details
+          if (selectedGeneration) {
+            await fetchGenerationDetails(selectedGeneration.id);
+          }
+
+          await fetchGenerations();
+
+          // Show success message
+          Swal.fire(successAlert.timer(data.message || "Pembayaran berhasil!"));
+        } else {
+          Swal.fire(errorAlert.simple("Terjadi kesalahan saat memproses pembayaran"));
+        }
+      } catch (error) {
+        console.error("Error paying individual payroll:", error);
+        Swal.fire(errorAlert.network());
+      } finally {
+        setPayingIndividual(null);
+      }
+    }
+  };
+
+  const handlePayAll = async (generationId: number) => {
+    // Calculate pending payrolls count and total amount
+    const pendingPayrolls = selectedGeneration?.payrolls?.filter((p) => p.status === "PENDING") || [];
+    const paidPayrolls = selectedGeneration?.payrolls?.filter((p) => p.status === "PAID") || [];
+    const totalAmount = pendingPayrolls.reduce((sum, p) => sum + p.totalSalary, 0);
+    const formattedTotal = formatCurrency(totalAmount);
+
+    // Create more descriptive confirmation message
+    const hasMixedStatus = paidPayrolls.length > 0;
+
+    const confirmationConfig = hasMixedStatus
+      ? {
+          title: "Konfirmasi Pembayaran Belum Dibayar",
+          text: `Terdapat ${paidPayrolls.length} gaji yang sudah dibayar. Apakah Anda yakin ingin membayar ${pendingPayrolls.length} gaji yang belum dibayar dengan total ${formattedTotal}?`,
+          icon: "question" as const,
+          showCancelButton: true,
+          confirmButtonText: `Ya, Bayar ${pendingPayrolls.length} Gaji`,
+          cancelButtonText: "Batal",
+          reverseButtons: true,
+          ...swalConfig
+        }
+      : confirmDialog.payAll(pendingPayrolls.length, formattedTotal);
+
+    const result = await Swal.fire(confirmationConfig);
+
+    if (result.isConfirmed) {
+      try {
+        setPayingAll(true);
+
+        const response = await fetch(`/api/payroll/generation/${generationId}/pay-all`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Refresh the generation details
+          if (selectedGeneration) {
+            await fetchGenerationDetails(selectedGeneration.id);
+          }
+
+          await fetchGenerations();
+
+          // Show success message with specific count
+          const successMessage = data.message || `${pendingPayrolls.length} gaji berhasil dibayar!`;
+
+          Swal.fire(successAlert.timer(successMessage));
+        } else {
+          Swal.fire(errorAlert.simple("Terjadi kesalahan saat memproses pembayaran"));
+        }
+      } catch (error) {
+        console.error("Error paying all payrolls:", error);
+        Swal.fire(errorAlert.network());
+      } finally {
+        setPayingAll(false);
       }
     }
   };
@@ -265,430 +360,448 @@ export default function GajiPage() {
     }).format(amount);
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
   const getStatusInfo = (status: string) => {
     switch (status) {
       case "PAID":
-        return { label: "Sudah Dibayar", color: "success" as const };
+        return { label: "Sudah Dibayar", color: "success" as const, icon: <CheckCircle /> };
       case "PENDING":
-        return { label: "Belum Dibayar", color: "warning" as const };
+        return { label: "Belum Dibayar", color: "warning" as const, icon: <Pending /> };
       case "CANCELLED":
-        return { label: "Dibatalkan", color: "error" as const };
+        return { label: "Dibatalkan", color: "error" as const, icon: <Delete /> };
       default:
-        return { label: status, color: "default" as const };
+        return { label: "Selesai", color: "info" as const, icon: <CheckCircle /> };
     }
   };
 
-  const getPendingPayrolls = () => {
-    return payrolls.filter((p) => p.status === "PENDING");
+  const getTotalStats = () => {
+    return generations.reduce(
+      (acc, gen) => {
+        acc.totalEmployees += gen.employeeCount;
+        acc.totalAmount += gen.totalAmount;
+        acc.totalGenerations += 1;
+
+        return acc;
+      },
+      { totalEmployees: 0, totalAmount: 0, totalGenerations: 0 }
+    );
   };
 
-  const getPaidPayrolls = () => {
-    return payrolls.filter((p) => p.status === "PAID");
-  };
-
-  const getCurrentPayrolls = () => {
-    switch (tabValue) {
-      case 0:
-        return payrolls;
-      case 1:
-        return getPendingPayrolls();
-      case 2:
-        return getPaidPayrolls();
-      default:
-        return payrolls;
-    }
-  };
-
-  const calculateTotals = () => {
-    const currentPayrolls = getCurrentPayrolls();
-    return {
-      totalBaseSalary: currentPayrolls.reduce((sum, p) => sum + p.baseSalary, 0),
-      totalCommission: currentPayrolls.reduce((sum, p) => sum + p.commission, 0),
-      totalBonus: currentPayrolls.reduce((sum, p) => sum + p.bonus, 0),
-      totalDeduction: currentPayrolls.reduce((sum, p) => sum + p.deduction, 0),
-      totalSalary: currentPayrolls.reduce((sum, p) => sum + p.totalSalary, 0)
-    };
-  };
-
-  const totals = calculateTotals();
+  const stats = getTotalStats();
 
   if (loading) {
     return (
       <Box display='flex' justifyContent='center' alignItems='center' minHeight='400px'>
-        <Typography>Loading data gaji...</Typography>
+        <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box p={3}>
-      <Box display='flex' justifyContent='space-between' alignItems='center' mb={3}>
-        <Typography variant='h4' component='h1'>
-          Manajemen Gaji
-        </Typography>
-        <Box display='flex' gap={2}>
-          <Button variant='outlined' startIcon={<Receipt />} onClick={() => setGenerateDialogOpen(true)}>
-            Generate Payroll
-          </Button>
-          <Button variant='contained' startIcon={<Add />} onClick={() => handleOpenDialog()}>
-            Input Manual
+    <Container maxWidth='xl'>
+      <Box p={3}>
+        {/* Header */}
+        <Box display='flex' justifyContent='space-between' alignItems='center' mb={3}>
+          <Box>
+            <Typography variant='h4' component='h1' gutterBottom>
+              Manajemen Gaji
+            </Typography>
+            <Typography variant='body1' color='textSecondary'>
+              Kelola dan pantau riwayat generate gaji bulanan karyawan
+            </Typography>
+          </Box>
+          <Button variant='contained' startIcon={<Add />} onClick={handleOpenDialog} size='large'>
+            Generate Gaji Baru
           </Button>
         </Box>
-      </Box>
 
-      {/* Period Selector */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box display='flex' alignItems='center' gap={2}>
-            <Typography variant='h6'>Periode:</Typography>
-            <FormControl size='small' sx={{ minWidth: 120 }}>
-              <InputLabel>Bulan</InputLabel>
-              <Select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} label='Bulan'>
-                {monthNames.map((month, index) => (
-                  <MenuItem key={index} value={index + 1}>
-                    {month}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl size='small' sx={{ minWidth: 100 }}>
-              <InputLabel>Tahun</InputLabel>
-              <Select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} label='Tahun'>
-                <MenuItem value={2023}>2023</MenuItem>
-                <MenuItem value={2024}>2024</MenuItem>
-                <MenuItem value={2025}>2025</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Summary Cards */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display='flex' alignItems='center' justifyContent='space-between'>
-                <Box>
-                  <Typography color='textSecondary' gutterBottom variant='body2'>
-                    Total Gaji Pokok
-                  </Typography>
-                  <Typography variant='h6'>{formatCurrency(totals.totalBaseSalary)}</Typography>
-                </Box>
-                <AttachMoney color='primary' />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display='flex' alignItems='center' justifyContent='space-between'>
-                <Box>
-                  <Typography color='textSecondary' gutterBottom variant='body2'>
-                    Total Komisi
-                  </Typography>
-                  <Typography variant='h6'>{formatCurrency(totals.totalCommission)}</Typography>
-                </Box>
-                <TrendingUp color='success' />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display='flex' alignItems='center' justifyContent='space-between'>
-                <Box>
-                  <Typography color='textSecondary' gutterBottom variant='body2'>
-                    Total Bonus
-                  </Typography>
-                  <Typography variant='h6'>{formatCurrency(totals.totalBonus)}</Typography>
-                </Box>
-                <CheckCircle color='info' />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display='flex' alignItems='center' justifyContent='space-between'>
-                <Box>
-                  <Typography color='textSecondary' gutterBottom variant='body2'>
-                    Total Gaji
-                  </Typography>
-                  <Typography variant='h6'>{formatCurrency(totals.totalSalary)}</Typography>
-                </Box>
-                <Receipt color='warning' />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
-        <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-          <Tab label={`Semua (${payrolls.length})`} />
-          <Tab label={`Belum Dibayar (${getPendingPayrolls().length})`} />
-          <Tab label={`Sudah Dibayar (${getPaidPayrolls().length})`} />
-        </Tabs>
-      </Box>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Karyawan</TableCell>
-              <TableCell>Periode</TableCell>
-              <TableCell>Gaji Pokok</TableCell>
-              <TableCell>Komisi</TableCell>
-              <TableCell>Bonus</TableCell>
-              <TableCell>Potongan</TableCell>
-              <TableCell>Total Gaji</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align='center'>Aksi</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {getCurrentPayrolls().map((payroll) => (
-              <TableRow key={payroll.id}>
-                <TableCell>
-                  <Box display='flex' alignItems='center' gap={2}>
-                    <Avatar>
-                      <Person />
-                    </Avatar>
-                    <Box>
-                      <Typography variant='subtitle2'>{payroll.employeeName}</Typography>
-                      <Typography variant='body2' color='textSecondary'>
-                        {payroll.employeePosition}
-                      </Typography>
-                    </Box>
+        {/* Stats Cards */}
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box display='flex' alignItems='center' gap={2}>
+                  <Avatar sx={{ bgcolor: "primary.main" }}>
+                    <Receipt />
+                  </Avatar>
+                  <Box>
+                    <Typography variant='h4'>{stats.totalGenerations}</Typography>
+                    <Typography variant='body2' color='textSecondary'>
+                      Total Generate
+                    </Typography>
                   </Box>
-                </TableCell>
-                <TableCell>
-                  <Typography variant='subtitle2'>
-                    {monthNames[payroll.month - 1]} {payroll.year}
-                  </Typography>
-                </TableCell>
-                <TableCell>{formatCurrency(payroll.baseSalary)}</TableCell>
-                <TableCell>{formatCurrency(payroll.commission)}</TableCell>
-                <TableCell>{formatCurrency(payroll.bonus)}</TableCell>
-                <TableCell>{formatCurrency(payroll.deduction)}</TableCell>
-                <TableCell>
-                  <Typography variant='subtitle2' color='primary'>
-                    {formatCurrency(payroll.totalSalary)}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Box display='flex' alignItems='center' gap={1}>
-                    <Chip
-                      label={getStatusInfo(payroll.status).label}
-                      color={getStatusInfo(payroll.status).color}
-                      size='small'
-                    />
-                    {payroll.status === "PENDING" && (
-                      <Button size='small' variant='outlined' color='success' onClick={() => handleMarkAsPaid(payroll)}>
-                        Bayar
-                      </Button>
-                    )}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box display='flex' alignItems='center' gap={2}>
+                  <Avatar sx={{ bgcolor: "success.main" }}>
+                    <People />
+                  </Avatar>
+                  <Box>
+                    <Typography variant='h4'>{stats.totalEmployees}</Typography>
+                    <Typography variant='body2' color='textSecondary'>
+                      Total Karyawan
+                    </Typography>
                   </Box>
-                </TableCell>
-                <TableCell align='center'>
-                  <IconButton size='small' onClick={() => handleOpenDialog(payroll)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton size='small' color='error' onClick={() => handleDelete(payroll)}>
-                    <Delete />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box display='flex' alignItems='center' gap={2}>
+                  <Avatar sx={{ bgcolor: "info.main" }}>
+                    <AttachMoney />
+                  </Avatar>
+                  <Box>
+                    <Typography variant='h4'>{formatCurrency(stats.totalAmount)}</Typography>
+                    <Typography variant='body2' color='textSecondary'>
+                      Total Nilai Gaji
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth='md' fullWidth>
-        <DialogTitle>{editingPayroll ? "Edit Data Gaji" : "Input Gaji Manual"}</DialogTitle>
-        <DialogContent>
-          <Box display='flex' flexDirection='column' gap={3} pt={2}>
-            <FormControl fullWidth required>
-              <InputLabel>Karyawan</InputLabel>
-              <Select
-                value={formData.employeeId}
-                onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                label='Karyawan'
-              >
-                <MenuItem value='1'>Sari Dewi</MenuItem>
-                <MenuItem value='2'>Made Wirawan</MenuItem>
-                <MenuItem value='3'>Kadek Ayu</MenuItem>
-                <MenuItem value='4'>Wayan Suarta</MenuItem>
-              </Select>
-            </FormControl>
+        {/* Generations Table */}
+        <Card>
+          <CardContent>
+            <Typography variant='h6' gutterBottom>
+              Riwayat Generate Gaji
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Periode</TableCell>
+                    <TableCell>Dibuat Oleh</TableCell>
+                    <TableCell>Jumlah Karyawan</TableCell>
+                    <TableCell>Total Gaji</TableCell>
+                    <TableCell>Tanggal Dibuat</TableCell>
+                    <TableCell align='center'>Aksi</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {generations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align='center'>
+                        <Typography variant='body2' color='textSecondary'>
+                          Belum ada data generate gaji
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    generations.map((generation) => (
+                      <TableRow key={generation.id}>
+                        <TableCell>
+                          <Box display='flex' alignItems='center' gap={1}>
+                            <CalendarToday fontSize='small' color='primary' />
+                            <Typography variant='subtitle2'>
+                              {monthNames[generation.month - 1]} {generation.year}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant='subtitle2'>{generation.generatedByUser.fullName}</Typography>
+                            <Typography variant='body2' color='textSecondary'>
+                              {generation.generatedByUser.email}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip label={`${generation.employeeCount} Karyawan`} color='primary' size='small' />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant='subtitle2' color='success.main'>
+                            {formatCurrency(generation.totalAmount)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant='body2'>{formatDate(generation.createdAt)}</Typography>
+                        </TableCell>
+                        <TableCell align='center'>
+                          <IconButton
+                            size='small'
+                            color='primary'
+                            onClick={() => fetchGenerationDetails(generation.id)}
+                            disabled={detailLoading}
+                          >
+                            {detailLoading ? <CircularProgress size={20} /> : <Visibility />}
+                          </IconButton>
+                          <IconButton size='small' color='error' onClick={() => handleDelete(generation)}>
+                            <Delete />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
+        {/* Generate Dialog */}
+        <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth='sm' fullWidth>
+          <DialogTitle>Generate Gaji Bulanan</DialogTitle>
+          <DialogContent>
+            <Alert severity='info' sx={{ mb: 3 }}>
+              Generate gaji akan menghitung gaji semua karyawan aktif berdasarkan periode yang dipilih.
+            </Alert>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={6}>
+                <FormControl fullWidth>
                   <InputLabel>Bulan</InputLabel>
                   <Select
                     value={formData.month}
-                    onChange={(e) => setFormData({ ...formData, month: e.target.value })}
                     label='Bulan'
+                    onChange={(e) => setFormData((prev) => ({ ...prev, month: e.target.value }))}
                   >
                     {monthNames.map((month, index) => (
-                      <MenuItem key={index} value={index + 1}>
+                      <MenuItem key={index + 1} value={index + 1}>
                         {month}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Tahun</InputLabel>
-                  <Select
-                    value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                    label='Tahun'
-                  >
-                    <MenuItem value='2023'>2023</MenuItem>
-                    <MenuItem value='2024'>2024</MenuItem>
-                    <MenuItem value='2025'>2025</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={6}>
                 <TextField
-                  label='Gaji Pokok'
-                  value={formData.baseSalary}
-                  onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
                   fullWidth
-                  required
+                  label='Tahun'
                   type='number'
-                  InputProps={{
-                    startAdornment: <InputAdornment position='start'>Rp</InputAdornment>
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label='Komisi'
-                  value={formData.commission}
-                  onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
-                  fullWidth
-                  type='number'
-                  InputProps={{
-                    startAdornment: <InputAdornment position='start'>Rp</InputAdornment>
-                  }}
+                  value={formData.year}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, year: e.target.value }))}
+                  inputProps={{ min: 2020, max: 2030 }}
                 />
               </Grid>
             </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Batal</Button>
+            <Button
+              onClick={handleSubmit}
+              variant='contained'
+              disabled={generating || !formData.month || !formData.year}
+            >
+              {generating ? <CircularProgress size={20} /> : "Generate Gaji"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label='Bonus'
-                  value={formData.bonus}
-                  onChange={(e) => setFormData({ ...formData, bonus: e.target.value })}
-                  fullWidth
-                  type='number'
-                  InputProps={{
-                    startAdornment: <InputAdornment position='start'>Rp</InputAdornment>
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label='Potongan'
-                  value={formData.deduction}
-                  onChange={(e) => setFormData({ ...formData, deduction: e.target.value })}
-                  fullWidth
-                  type='number'
-                  InputProps={{
-                    startAdornment: <InputAdornment position='start'>Rp</InputAdornment>
-                  }}
-                />
-              </Grid>
-            </Grid>
+        {/* Detail Dialog */}
+        <Dialog open={detailDialogOpen} onClose={handleCloseDetailDialog} maxWidth='lg' fullWidth>
+          <DialogTitle>
+            Detail Gaji -{" "}
+            {selectedGeneration && `${monthNames[selectedGeneration.month - 1]} ${selectedGeneration.year}`}
+          </DialogTitle>
+          <DialogContent>
+            {detailLoading ? (
+              <Box display='flex' flexDirection='column' alignItems='center' py={4}>
+                <CircularProgress size={48} />
+                <Typography variant='body1' sx={{ mt: 2 }}>
+                  Memuat detail gaji...
+                </Typography>
+              </Box>
+            ) : selectedGeneration ? (
+              <Box>
+                {/* Generation Info */}
+                <Box mb={3}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant='subtitle2' color='textSecondary'>
+                        Dibuat Oleh
+                      </Typography>
+                      <Typography variant='body1'>{selectedGeneration.generatedByUser.fullName}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant='subtitle2' color='textSecondary'>
+                        Tanggal Dibuat
+                      </Typography>
+                      <Typography variant='body1'>{formatDate(selectedGeneration.createdAt)}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant='subtitle2' color='textSecondary'>
+                        Jumlah Karyawan
+                      </Typography>
+                      <Typography variant='body1'>{selectedGeneration.employeeCount} Karyawan</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant='subtitle2' color='textSecondary'>
+                        Total Gaji
+                      </Typography>
+                      <Typography variant='body1' color='success.main'>
+                        {formatCurrency(selectedGeneration.totalAmount)}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
 
-            <TextField
-              label='Catatan'
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              fullWidth
-              multiline
-              rows={3}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Batal</Button>
-          <Button
-            onClick={handleSubmit}
-            variant='contained'
-            disabled={!formData.employeeId || !formData.month || !formData.year || !formData.baseSalary}
-          >
-            {editingPayroll ? "Update" : "Simpan"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                <Divider sx={{ my: 2 }} />
 
-      {/* Generate Payroll Dialog */}
-      <Dialog open={generateDialogOpen} onClose={() => setGenerateDialogOpen(false)} maxWidth='sm' fullWidth>
-        <DialogTitle>Generate Payroll Otomatis</DialogTitle>
-        <DialogContent>
-          <Alert severity='info' sx={{ mb: 3 }}>
-            Sistem akan menghitung gaji semua karyawan aktif berdasarkan komisi dari appointment yang selesai pada
-            periode yang dipilih.
-          </Alert>
+                {/* Payroll Details */}
+                <Box display='flex' justifyContent='space-between' alignItems='center' mb={2}>
+                  <Typography variant='h6'>Detail Gaji Karyawan</Typography>
+                  {selectedGeneration && selectedGeneration.payrolls?.some((p) => p.status === "PENDING") && (
+                    <Box>
+                      {(() => {
+                        const pendingCount =
+                          selectedGeneration.payrolls?.filter((p) => p.status === "PENDING").length || 0;
 
-          <Box display='flex' flexDirection='column' gap={3} pt={2}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Bulan</InputLabel>
-                  <Select
-                    value={generateData.month}
-                    onChange={(e) => setGenerateData({ ...generateData, month: Number(e.target.value) })}
-                    label='Bulan'
-                  >
-                    {monthNames.map((month, index) => (
-                      <MenuItem key={index} value={index + 1}>
-                        {month}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Tahun</InputLabel>
-                  <Select
-                    value={generateData.year}
-                    onChange={(e) => setGenerateData({ ...generateData, year: Number(e.target.value) })}
-                    label='Tahun'
-                  >
-                    <MenuItem value={2023}>2023</MenuItem>
-                    <MenuItem value={2024}>2024</MenuItem>
-                    <MenuItem value={2025}>2025</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setGenerateDialogOpen(false)}>Batal</Button>
-          <Button onClick={handleGeneratePayroll} variant='contained' color='warning'>
-            Generate Payroll
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                        const totalCount = selectedGeneration.payrolls?.length || 0;
+                        const hasMixedStatus = pendingCount < totalCount;
+
+                        return (
+                          <Button
+                            variant='contained'
+                            color='success'
+                            startIcon={payingAll ? <CircularProgress size={16} /> : <Paid />}
+                            onClick={() => handlePayAll(selectedGeneration.id)}
+                            disabled={payingAll}
+                            size='small'
+                          >
+                            {payingAll
+                              ? "Membayar..."
+                              : hasMixedStatus
+                                ? `Bayar ${pendingCount} Belum Dibayar`
+                                : "Bayar Semua"}
+                          </Button>
+                        );
+                      })()}
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Payment Status Summary */}
+                {selectedGeneration && selectedGeneration.payrolls && (
+                  <Box mb={2} display='flex' gap={1}>
+                    {(() => {
+                      const pendingCount = selectedGeneration.payrolls.filter((p) => p.status === "PENDING").length;
+                      const paidCount = selectedGeneration.payrolls.filter((p) => p.status === "PAID").length;
+
+                      return (
+                        <>
+                          {paidCount > 0 && (
+                            <Chip
+                              label={`${paidCount} Sudah Dibayar`}
+                              color='success'
+                              variant='outlined'
+                              size='small'
+                            />
+                          )}
+                          {pendingCount > 0 && (
+                            <Chip
+                              label={`${pendingCount} Belum Dibayar`}
+                              color='warning'
+                              variant='outlined'
+                              size='small'
+                            />
+                          )}
+                        </>
+                      );
+                    })()}
+                  </Box>
+                )}
+
+                <TableContainer component={Paper} variant='outlined'>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Karyawan</TableCell>
+                        <TableCell>Gaji Pokok</TableCell>
+                        <TableCell>Komisi</TableCell>
+                        <TableCell>Bonus</TableCell>
+                        <TableCell>Potongan</TableCell>
+                        <TableCell>Total</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell align='center'>Aksi</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedGeneration.payrolls?.map((payroll) => (
+                        <TableRow key={payroll.id}>
+                          <TableCell>
+                            <Box display='flex' alignItems='center' gap={1}>
+                              <Avatar sx={{ width: 32, height: 32 }}>
+                                <Person />
+                              </Avatar>
+                              <Box>
+                                <Typography variant='subtitle2'>{payroll.employee.name}</Typography>
+                                <Typography variant='caption' color='textSecondary'>
+                                  {payroll.employee.position}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{formatCurrency(payroll.baseSalary)}</TableCell>
+                          <TableCell>{formatCurrency(payroll.commission)}</TableCell>
+                          <TableCell>{formatCurrency(payroll.bonus)}</TableCell>
+                          <TableCell>{formatCurrency(payroll.deduction)}</TableCell>
+                          <TableCell>
+                            <Typography variant='subtitle2' color='primary'>
+                              {formatCurrency(payroll.totalSalary)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip {...getStatusInfo(payroll.status)} size='small' />
+                          </TableCell>
+                          <TableCell align='center'>
+                            {payroll.status === "PENDING" && (
+                              <Button
+                                variant='outlined'
+                                color='success'
+                                size='small'
+                                startIcon={
+                                  payingIndividual === payroll.id ? <CircularProgress size={16} /> : <Payment />
+                                }
+                                onClick={() => handlePayIndividual(payroll.id)}
+                                disabled={payingIndividual === payroll.id || payingAll}
+                              >
+                                {payingIndividual === payroll.id ? "Bayar..." : "Bayar"}
+                              </Button>
+                            )}
+                            {payroll.status === "PAID" && (
+                              <Chip label='Sudah Dibayar' color='success' size='small' variant='outlined' />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )) || []}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            ) : (
+              <Box display='flex' justifyContent='center' py={4}>
+                <Typography variant='body1' color='textSecondary'>
+                  Tidak ada data yang tersedia
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDetailDialog}>Tutup</Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </Container>
   );
-}
+};
+
+export default PayrollPage;
