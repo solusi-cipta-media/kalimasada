@@ -1,0 +1,105 @@
+import { type NextRequest, NextResponse } from "next/server";
+
+import AppointmentRepository from "@/repositories/AppointmentRepository";
+import { responseError } from "@/@core/utils/serverHelpers";
+import { ResponseError } from "@/types/errors";
+
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const id = parseInt(params.id);
+
+    if (isNaN(id)) {
+      return responseError(new ResponseError("Invalid appointment ID", 400));
+    }
+
+    const appointmentRepo = new AppointmentRepository();
+    const appointment = await appointmentRepo.getById(id);
+
+    if (!appointment) {
+      return responseError(new ResponseError("Appointment not found", 404));
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: appointment
+    });
+  } catch (error) {
+    console.error("Error fetching appointment:", error);
+
+    return responseError(new ResponseError("Failed to fetch appointment", 500));
+  }
+}
+
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const id = parseInt(params.id);
+
+    if (isNaN(id)) {
+      return responseError(new ResponseError("Invalid appointment ID", 400));
+    }
+
+    const body = await request.json();
+    const { customerId, employeeId, date, startTime, endTime, status, notes } = body;
+
+    const appointmentRepo = new AppointmentRepository();
+
+    // Check if appointment exists
+    const existingAppointment = await appointmentRepo.getById(id);
+
+    if (!existingAppointment) {
+      return responseError(new ResponseError("Appointment not found", 404));
+    }
+
+    const updateData = {
+      ...(customerId && { customerId: parseInt(customerId) }),
+      ...(employeeId && { employeeId: parseInt(employeeId) }),
+      ...(date && { date: new Date(date) }),
+      ...(startTime && { startTime: new Date(startTime) }),
+      ...(endTime && { endTime: new Date(endTime) }),
+      ...(status && { status }),
+      ...(notes !== undefined && { notes })
+    };
+
+    const updatedAppointment = await appointmentRepo.update(id, updateData);
+
+    return NextResponse.json({
+      success: true,
+      data: updatedAppointment,
+      message: "Appointment updated successfully"
+    });
+  } catch (error) {
+    console.error("Error updating appointment:", error);
+
+    return responseError(new ResponseError("Failed to update appointment", 500));
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const id = parseInt(params.id);
+
+    if (isNaN(id)) {
+      return responseError(new ResponseError("Invalid appointment ID", 400));
+    }
+
+    const appointmentRepo = new AppointmentRepository();
+
+    // Check if appointment exists
+    const existingAppointment = await appointmentRepo.getById(id);
+
+    if (!existingAppointment) {
+      return responseError(new ResponseError("Appointment not found", 404));
+    }
+
+    await appointmentRepo.delete(id);
+
+    return NextResponse.json({
+      success: true,
+      message: "Appointment deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error deleting appointment:", error);
+
+    return responseError(new ResponseError("Failed to delete appointment", 500));
+  }
+}

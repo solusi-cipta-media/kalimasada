@@ -1,258 +1,130 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
 
+import { useState, useEffect, useCallback } from "react";
+
+import { Card, CardContent, Typography, Grid, Box, CircularProgress, IconButton, MenuItem, Menu } from "@mui/material";
 import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  Chip,
-  useTheme,
-  Paper,
-  TextField,
-  InputAdornment
-} from "@mui/material";
-import { CalendarToday, People, AttachMoney, Spa, Schedule } from "@mui/icons-material";
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip,
   ResponsiveContainer,
-  Legend
+  LineChart,
+  Line
 } from "recharts";
+import { TrendingUp, TrendingDown, CalendarToday, People, Receipt, Star } from "@mui/icons-material";
+import { format, addDays } from "date-fns";
 
-interface DashboardStats {
+interface DashboardData {
   todayAppointments: number;
   monthlyRevenue: number;
   totalCustomers: number;
   totalEmployees: number;
-  upcomingAppointments: any[];
-  revenueData: any[];
-  serviceDistribution: any[];
-  dailyActivityData: any[];
-  topServices: any[];
-  topEmployees: any[];
+  serviceDistribution: Array<{ name: string; value: number; color: string }>;
+  revenueChart: Array<{ date: string; revenue: number }>;
+  dailyActivity: Array<{ day: string; appointments: number }>;
+  topServices: Array<{ name: string; count: number; revenue: number }>;
+  topEmployees: Array<{ name: string; appointments: number; revenue: number }>;
 }
 
-export default function BerandaPage() {
-  const theme = useTheme();
+const StatCard = ({
+  title,
+  value,
+  icon,
+  trend,
+  trendValue,
+  color = "primary",
+  isLoading = false
+}: {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  trend?: "up" | "down";
+  trendValue?: string;
+  color?: string;
+  isLoading?: boolean;
+}) => (
+  <Card sx={{ height: "100%", position: "relative", overflow: "visible" }}>
+    <CardContent>
+      <Box display='flex' justifyContent='space-between' alignItems='flex-start'>
+        <Box>
+          <Typography color='textSecondary' gutterBottom variant='body2'>
+            {title}
+          </Typography>
+          {isLoading ? (
+            <CircularProgress size={24} />
+          ) : (
+            <Typography variant='h4' component='div' color={color}>
+              {value}
+            </Typography>
+          )}
+          {trend && trendValue && !isLoading && (
+            <Box display='flex' alignItems='center' mt={1}>
+              {trend === "up" ? (
+                <TrendingUp color='success' fontSize='small' />
+              ) : (
+                <TrendingDown color='error' fontSize='small' />
+              )}
+              <Typography variant='body2' color={trend === "up" ? "success.main" : "error.main"} ml={0.5}>
+                {trendValue}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+        <Box
+          sx={{
+            p: 1,
+            borderRadius: 1,
+            backgroundColor: `${color}.light`,
+            color: `${color}.dark`
+          }}
+        >
+          {icon}
+        </Box>
+      </Box>
+    </CardContent>
+  </Card>
+);
 
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]); // Format: YYYY-MM-DD
-
-  const [stats, setStats] = useState<DashboardStats>({
+export default function HomePage() {
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
     todayAppointments: 0,
     monthlyRevenue: 0,
     totalCustomers: 0,
     totalEmployees: 0,
-    upcomingAppointments: [],
-    revenueData: [],
     serviceDistribution: [],
-    dailyActivityData: [],
+    revenueChart: [],
+    dailyActivity: [],
     topServices: [],
     topEmployees: []
   });
 
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+
     try {
-      setLoading(true);
+      const response = await fetch(`/api/dashboard?date=${selectedDate}`);
 
-      // Generate different data based on selected date
-      const dateObj = new Date(selectedDate);
-      const dateStr = selectedDate;
-      const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      if (response.ok) {
+        const data = await response.json();
 
-      // Base multiplier for different days
-      const multiplier = isWeekend ? 0.7 : 1.0; // Weekend typically has less activity
-      const dateHash = dateObj.getDate() % 10; // Use date to create variation
-
-      // TODO: Implement API calls to fetch dashboard data for specific date
-      // For now, we'll use mock data that varies by date
-      setStats({
-        todayAppointments: Math.floor((12 + dateHash) * multiplier),
-        monthlyRevenue: Math.floor(45000000 * (1 + dateHash * 0.1)),
-        totalCustomers: 156 + dateHash,
-        totalEmployees: 8,
-        upcomingAppointments: [
-          {
-            id: 1,
-            customerName: isWeekend ? "Weekend Client A" : "Sarah Johnson",
-            serviceName: "Balinese Massage",
-            time: "10:00",
-            employee: "Sari Dewi",
-            date: dateStr
-          },
-          {
-            id: 2,
-            customerName: isWeekend ? "Weekend Client B" : "Michael Chen",
-            serviceName: "Facial Treatment",
-            time: "11:30",
-            employee: "Kadek Ayu",
-            date: dateStr
-          },
-          {
-            id: 3,
-            customerName: isWeekend ? "Weekend Client C" : "Lisa Anderson",
-            serviceName: "Hair Treatment",
-            time: "13:00",
-            employee: "Ni Luh Putu",
-            date: dateStr
-          }
-        ],
-        revenueData: [
-          { name: "Jan", revenue: 24000000 },
-          { name: "Feb", revenue: 28000000 },
-          { name: "Mar", revenue: 32000000 },
-          { name: "Apr", revenue: 35000000 },
-          { name: "May", revenue: 38000000 },
-          { name: "Jun", revenue: Math.floor(45000000 * (1 + dateHash * 0.1)) }
-        ],
-        serviceDistribution: [
-          { name: "Massage", value: 35, color: theme.palette.primary.main },
-          { name: "Facial", value: 25, color: theme.palette.secondary.main },
-          { name: "Hair Treatment", value: 20, color: theme.palette.success.main },
-          { name: "Body Treatment", value: 15, color: theme.palette.warning.main },
-          { name: "Others", value: 5, color: theme.palette.error.main }
-        ],
-        dailyActivityData: [
-          {
-            time: "08:00",
-            "Service at Home": Math.floor((2 + dateHash * 0.2) * multiplier),
-            "Service at Location": Math.floor((5 + dateHash * 0.3) * multiplier)
-          },
-          {
-            time: "10:00",
-            "Service at Home": Math.floor((4 + dateHash * 0.3) * multiplier),
-            "Service at Location": Math.floor((8 + dateHash * 0.4) * multiplier)
-          },
-          {
-            time: "12:00",
-            "Service at Home": Math.floor((3 + dateHash * 0.2) * multiplier),
-            "Service at Location": Math.floor((12 + dateHash * 0.5) * multiplier)
-          },
-          {
-            time: "14:00",
-            "Service at Home": Math.floor((6 + dateHash * 0.4) * multiplier),
-            "Service at Location": Math.floor((15 + dateHash * 0.6) * multiplier)
-          },
-          {
-            time: "16:00",
-            "Service at Home": Math.floor((5 + dateHash * 0.3) * multiplier),
-            "Service at Location": Math.floor((10 + dateHash * 0.4) * multiplier)
-          },
-          {
-            time: "18:00",
-            "Service at Home": Math.floor((3 + dateHash * 0.2) * multiplier),
-            "Service at Location": Math.floor((7 + dateHash * 0.3) * multiplier)
-          },
-          {
-            time: "20:00",
-            "Service at Home": Math.floor((2 + dateHash * 0.1) * multiplier),
-            "Service at Location": Math.floor((4 + dateHash * 0.2) * multiplier)
-          }
-        ],
-        topServices: [
-          {
-            id: 1,
-            name: "Balinese Massage",
-            bookings: Math.floor((25 + dateHash * 2) * multiplier),
-            revenue: Math.floor((15000000 + dateHash * 1000000) * multiplier),
-            icon: "💆‍♀️"
-          },
-          {
-            id: 2,
-            name: "Facial Treatment",
-            bookings: Math.floor((20 + dateHash * 1.5) * multiplier),
-            revenue: Math.floor((8000000 + dateHash * 800000) * multiplier),
-            icon: "✨"
-          },
-          {
-            id: 3,
-            name: "Hair Treatment",
-            bookings: Math.floor((18 + dateHash * 1.2) * multiplier),
-            revenue: Math.floor((6000000 + dateHash * 600000) * multiplier),
-            icon: "💇‍♀️"
-          },
-          {
-            id: 4,
-            name: "Body Scrub",
-            bookings: Math.floor((15 + dateHash * 1) * multiplier),
-            revenue: Math.floor((5000000 + dateHash * 500000) * multiplier),
-            icon: "🧴"
-          },
-          {
-            id: 5,
-            name: "Aromatherapy",
-            bookings: Math.floor((12 + dateHash * 0.8) * multiplier),
-            revenue: Math.floor((4000000 + dateHash * 400000) * multiplier),
-            icon: "🕯️"
-          }
-        ],
-        topEmployees: [
-          {
-            id: 1,
-            name: "Sari Dewi",
-            position: "Senior Therapist",
-            workload: Math.floor((28 + dateHash * 2) * multiplier),
-            rating: 4.9,
-            avatar: "/images/avatars/1.png"
-          },
-          {
-            id: 2,
-            name: "Kadek Ayu",
-            position: "Facial Specialist",
-            workload: Math.floor((24 + dateHash * 1.8) * multiplier),
-            rating: 4.8,
-            avatar: "/images/avatars/2.png"
-          },
-          {
-            id: 3,
-            name: "Ni Luh Putu",
-            position: "Hair Stylist",
-            workload: Math.floor((22 + dateHash * 1.5) * multiplier),
-            rating: 4.7,
-            avatar: "/images/avatars/3.png"
-          },
-          {
-            id: 4,
-            name: "Made Sutrisna",
-            position: "Massage Therapist",
-            workload: Math.floor((20 + dateHash * 1.2) * multiplier),
-            rating: 4.6,
-            avatar: "/images/avatars/4.png"
-          },
-          {
-            id: 5,
-            name: "Wayan Sari",
-            position: "Body Treatment",
-            workload: Math.floor((18 + dateHash * 1) * multiplier),
-            rating: 4.5,
-            avatar: "/images/avatars/5.png"
-          }
-        ]
-      });
-      setLoading(false);
+        setDashboardData(data);
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
+    } finally {
       setLoading(false);
     }
-  }, [theme.palette, selectedDate]);
+  }, [selectedDate]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -266,440 +138,244 @@ export default function BerandaPage() {
     }).format(amount);
   };
 
-  // Create drag and drop cards configuration
-  const StatCard = ({
-    title,
-    value,
-    icon,
-    color = "primary"
-  }: {
-    title: string;
-    value: string | number;
-    icon: React.ReactNode;
-    color?: "primary" | "secondary" | "success" | "warning" | "error";
-  }) => (
-    <Card sx={{ height: "100%" }}>
-      <CardContent>
-        <Box display='flex' alignItems='center' justifyContent='space-between'>
-          <Box>
-            <Typography color='textSecondary' gutterBottom variant='body2'>
-              {title}
-            </Typography>
-            <Typography variant='h4' component='h2'>
-              {value}
-            </Typography>
-          </Box>
-          <Box color={`${color}.main`}>{icon}</Box>
-        </Box>
-      </CardContent>
-    </Card>
-  );
+  const handleDateMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
 
-  if (loading) {
-    return (
-      <Box display='flex' justifyContent='center' alignItems='center' minHeight='400px'>
-        <Typography>Loading dashboard...</Typography>
-      </Box>
-    );
-  }
+  const handleDateMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleDateSelect = (days: number) => {
+    const newDate = days === 0 ? new Date() : addDays(new Date(), days);
+
+    setSelectedDate(format(newDate, "yyyy-MM-dd"));
+    handleDateMenuClose();
+  };
 
   return (
-    <Box p={{ xs: 2, md: 3 }}>
-      <Typography
-        variant='h4'
-        component='h1'
-        gutterBottom
-        sx={{
-          fontSize: { xs: "1.5rem", md: "2.125rem" },
-          marginBottom: { xs: 1, sm: 2 }
-        }}
-      >
-        Dashboard Kalimasada Spa & Salon
-      </Typography>
-
-      {/* Date Filter */}
-      <Paper elevation={1} sx={{ p: { xs: 1.5, md: 2 }, mb: 3 }}>
-        <Box
-          display='flex'
-          flexDirection={{ xs: "column", sm: "row" }}
-          alignItems={{ xs: "flex-start", sm: "center" }}
-          gap={2}
-        >
-          <Typography
-            variant='h6'
-            component='span'
-            sx={{
-              fontSize: { xs: "1rem", md: "1.25rem" }
-            }}
-          >
-            Filter Tanggal:
+    <Box sx={{ p: 3 }}>
+      <Box display='flex' justifyContent='space-between' alignItems='center' mb={3}>
+        <Box>
+          <Typography variant='h4' gutterBottom>
+            Dashboard
           </Typography>
-          <TextField
-            type='date'
-            size='small'
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position='start'>
-                  <CalendarToday />
-                </InputAdornment>
-              )
-            }}
-            sx={{ minWidth: { xs: "100%", sm: 200 } }}
-          />
-          <Typography
-            variant='body2'
-            color='textSecondary'
-            sx={{
-              fontSize: { xs: "0.75rem", md: "0.875rem" },
-              lineHeight: 1.4
-            }}
-          >
-            Data untuk:{" "}
-            {new Date(selectedDate).toLocaleDateString("id-ID", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric"
-            })}
-            {(() => {
-              const dayOfWeek = new Date(selectedDate).getDay();
-
-              return dayOfWeek === 0 || dayOfWeek === 6 ? " (Weekend)" : " (Weekday)";
-            })()}
+          <Typography variant='body1' color='textSecondary'>
+            Selamat datang di dashboard Kalimasada Spa
           </Typography>
         </Box>
-      </Paper>
+        <Box display='flex' alignItems='center' gap={2}>
+          <Typography variant='body2' color='textSecondary'>
+            {format(new Date(selectedDate), "dd MMMM yyyy")}
+          </Typography>
+          <IconButton onClick={handleDateMenuClick}>
+            <CalendarToday />
+          </IconButton>
+          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleDateMenuClose}>
+            <MenuItem onClick={() => handleDateSelect(0)}>Hari Ini</MenuItem>
+            <MenuItem onClick={() => handleDateSelect(-1)}>Kemarin</MenuItem>
+            <MenuItem onClick={() => handleDateSelect(-7)}>7 Hari Lalu</MenuItem>
+            <MenuItem onClick={() => handleDateSelect(-30)}>30 Hari Lalu</MenuItem>
+          </Menu>
+        </Box>
+      </Box>
 
-      {/* Stats Cards */}
-      <Grid container spacing={{ xs: 2, md: 3 }} mb={4}>
+      <Grid container spacing={3} mb={3}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title='Appointment Hari Ini'
-            value={stats.todayAppointments}
-            icon={<CalendarToday fontSize='large' />}
+            title='Janji Hari Ini'
+            value={dashboardData.todayAppointments}
+            icon={<CalendarToday />}
+            trend='up'
+            trendValue='+12%'
             color='primary'
+            isLoading={loading}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title='Pendapatan Bulan Ini'
-            value={formatCurrency(stats.monthlyRevenue)}
-            icon={<AttachMoney fontSize='large' />}
+            value={formatCurrency(dashboardData.monthlyRevenue)}
+            icon={<Receipt />}
+            trend='up'
+            trendValue='+8%'
             color='success'
+            isLoading={loading}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title='Total Customer'
-            value={stats.totalCustomers}
-            icon={<People fontSize='large' />}
-            color='secondary'
+            title='Total Pelanggan'
+            value={dashboardData.totalCustomers}
+            icon={<People />}
+            trend='up'
+            trendValue='+5%'
+            color='info'
+            isLoading={loading}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title='Total Karyawan'
-            value={stats.totalEmployees}
-            icon={<Spa fontSize='large' />}
+            value={dashboardData.totalEmployees}
+            icon={<Star />}
             color='warning'
+            isLoading={loading}
           />
         </Grid>
       </Grid>
 
-      {/* Charts Section */}
-      <Grid container spacing={{ xs: 2, md: 3 }} mb={4}>
-        {/* Revenue Chart */}
+      <Grid container spacing={3} mb={3}>
         <Grid item xs={12} md={8}>
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Pendapatan 6 Bulan Terakhir
+                Pendapatan 7 Hari Terakhir
               </Typography>
-              <Box sx={{ height: { xs: 250, md: 300 } }}>
-                <ResponsiveContainer width='100%' height='100%'>
-                  <AreaChart data={stats.revenueData}>
+              {loading ? (
+                <Box display='flex' justifyContent='center' py={4}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <ResponsiveContainer width='100%' height={300}>
+                  <LineChart data={dashboardData.revenueChart}>
                     <CartesianGrid strokeDasharray='3 3' />
-                    <XAxis dataKey='name' />
-                    <YAxis tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`} />
-                    <RechartsTooltip formatter={(value) => [formatCurrency(Number(value)), "Pendapatan"]} />
-                    <Area
-                      type='monotone'
-                      dataKey='revenue'
-                      stroke={theme.palette.primary.main}
-                      fill={theme.palette.primary.main}
-                      fillOpacity={0.3}
-                    />
-                  </AreaChart>
+                    <XAxis dataKey='date' />
+                    <YAxis tickFormatter={(value) => `${value / 1000000}M`} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Line type='monotone' dataKey='revenue' stroke='#8884d8' strokeWidth={2} />
+                  </LineChart>
                 </ResponsiveContainer>
-              </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Service Distribution Chart */}
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
                 Distribusi Layanan
               </Typography>
-              <Box sx={{ height: { xs: 250, md: 300 } }}>
-                <ResponsiveContainer width='100%' height='100%'>
+              {loading ? (
+                <Box display='flex' justifyContent='center' py={4}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <ResponsiveContainer width='100%' height={300}>
                   <PieChart>
                     <Pie
-                      data={stats.serviceDistribution}
+                      data={dashboardData.serviceDistribution}
                       cx='50%'
                       cy='50%'
+                      labelLine={false}
                       outerRadius={80}
+                      fill='#8884d8'
                       dataKey='value'
-                      label={({ name, value }) => `${name}: ${value}%`}
                     >
-                      {stats.serviceDistribution.map((entry, index) => (
+                      {dashboardData.serviceDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <RechartsTooltip formatter={(value) => [`${value}%`, "Persentase"]} />
+                    <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
-              </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Daily Activity Services Chart */}
-      <Grid container spacing={{ xs: 2, md: 3 }} mb={4}>
+      <Grid container spacing={3} mb={3}>
         <Grid item xs={12}>
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Daily Activity Services - Service at Home vs Service at Location
+                Aktivitas Harian (7 Hari Terakhir)
               </Typography>
-              <Box sx={{ height: { xs: 300, md: 400 } }}>
-                <ResponsiveContainer width='100%' height='100%'>
-                  <BarChart data={stats.dailyActivityData} barSize={30}>
+              {loading ? (
+                <Box display='flex' justifyContent='center' py={4}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <ResponsiveContainer width='100%' height={300}>
+                  <BarChart data={dashboardData.dailyActivity}>
                     <CartesianGrid strokeDasharray='3 3' />
-                    <XAxis dataKey='time' />
+                    <XAxis dataKey='day' />
                     <YAxis />
-                    <RechartsTooltip />
-                    <Legend />
-                    <Bar
-                      dataKey='Service at Home'
-                      stackId='a'
-                      fill={theme.palette.primary.main}
-                      name='Service at Home'
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar
-                      dataKey='Service at Location'
-                      stackId='a'
-                      fill={theme.palette.secondary.main}
-                      name='Service at Location'
-                      radius={[4, 4, 0, 0]}
-                    />
+                    <Tooltip />
+                    <Bar dataKey='appointments' fill='#8884d8' />
                   </BarChart>
                 </ResponsiveContainer>
-              </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Bottom Section */}
-      <Grid container spacing={{ xs: 2, md: 3 }}>
-        <Grid item xs={12} md={8}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Appointment Mendatang
+                Layanan Terpopuler
               </Typography>
-              <List>
-                {stats.upcomingAppointments.map((appointment) => (
-                  <ListItem key={appointment.id} divider>
-                    <ListItemAvatar>
-                      <Avatar>
-                        <Schedule />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box display='flex' alignItems='center' gap={1}>
-                          <Typography variant='subtitle1'>{appointment.customerName}</Typography>
-                          <Chip label={appointment.time} size='small' color='primary' />
-                        </Box>
-                      }
-                      secondary={
-                        <Typography variant='body2' color='textSecondary'>
-                          {appointment.serviceName} • {appointment.employee}
+              {loading ? (
+                <Box display='flex' justifyContent='center' py={4}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Box>
+                  {dashboardData.topServices.map((service, index) => (
+                    <Box key={index} display='flex' justifyContent='space-between' alignItems='center' py={1}>
+                      <Typography variant='body2'>{service.name}</Typography>
+                      <Box textAlign='right'>
+                        <Typography variant='body2' fontWeight='bold'>
+                          {service.count} appointments
                         </Typography>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
+                        <Typography variant='caption' color='textSecondary'>
+                          {formatCurrency(service.revenue)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Quick Actions
+                Karyawan Terbaik
               </Typography>
-              <Box display='flex' flexDirection='column' gap={2}>
-                <Chip
-                  label='Buat Appointment Baru'
-                  clickable
-                  color='primary'
-                  variant='outlined'
-                  onClick={() => {
-                    /* TODO: Navigate to new appointment */
-                  }}
-                />
-                <Chip
-                  label='Tambah Customer Baru'
-                  clickable
-                  color='secondary'
-                  variant='outlined'
-                  onClick={() => {
-                    /* TODO: Navigate to new customer */
-                  }}
-                />
-                <Chip
-                  label='Lihat Jadwal Hari Ini'
-                  clickable
-                  color='info'
-                  variant='outlined'
-                  onClick={() => {
-                    /* TODO: Navigate to today's schedule */
-                  }}
-                />
-                <Chip
-                  label='Generate Payroll'
-                  clickable
-                  color='warning'
-                  variant='outlined'
-                  onClick={() => {
-                    /* TODO: Navigate to payroll */
-                  }}
-                />
-              </Box>
+              {loading ? (
+                <Box display='flex' justifyContent='center' py={4}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Box>
+                  {dashboardData.topEmployees.map((employee, index) => (
+                    <Box key={index} display='flex' justifyContent='space-between' alignItems='center' py={1}>
+                      <Typography variant='body2'>{employee.name}</Typography>
+                      <Box textAlign='right'>
+                        <Typography variant='body2' fontWeight='bold'>
+                          {employee.appointments} appointments
+                        </Typography>
+                        <Typography variant='caption' color='textSecondary'>
+                          {formatCurrency(employee.revenue)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-
-      {/* Top 5 Best Seller Services and Top 5 Workload Employees */}
-      <Box mt={8} mb={8}>
-        <Typography variant='h5' component='h2' gutterBottom sx={{ mb: 4, fontWeight: "bold", textAlign: "center" }}>
-          Top Performance Analytics
-        </Typography>
-        <Grid container spacing={5}>
-          {/* Top 5 Best Seller Services */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: "100%", boxShadow: 4, borderRadius: 3 }}>
-              <CardContent sx={{ p: 4 }}>
-                <Typography variant='h6' gutterBottom sx={{ mb: 4, fontWeight: "bold", color: "primary.main" }}>
-                  🏆 Top 5 Best Seller Services
-                </Typography>
-                <List sx={{ p: 0 }}>
-                  {stats.topServices.map((service, index) => (
-                    <ListItem key={service.id} divider sx={{ py: 2, px: 1 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 48, height: 48 }}>{index + 1}</Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        sx={{ ml: 2 }}
-                        primary={
-                          <Box display='flex' alignItems='center' gap={1}>
-                            <Typography variant='body1' component='span'>
-                              {service.icon}
-                            </Typography>
-                            <Typography variant='subtitle1' component='span' fontWeight='bold'>
-                              {service.name}
-                            </Typography>
-                          </Box>
-                        }
-                        secondary={
-                          <Box display='flex' justifyContent='space-between' mt={1}>
-                            <Typography variant='body2' color='textSecondary'>
-                              {service.bookings} bookings
-                            </Typography>
-                            <Typography variant='body2' color='primary.main' fontWeight='bold'>
-                              {formatCurrency(service.revenue)}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Top 5 Workload Employees */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: "100%", boxShadow: 4, borderRadius: 3 }}>
-              <CardContent sx={{ p: 4 }}>
-                <Typography variant='h6' gutterBottom sx={{ mb: 4, fontWeight: "bold", color: "secondary.main" }}>
-                  👨‍💼 Top 5 Workload Employees
-                </Typography>
-                <List sx={{ p: 0 }}>
-                  {stats.topEmployees.map((employee) => (
-                    <ListItem key={employee.id} divider sx={{ py: 2, px: 1 }}>
-                      <ListItemAvatar>
-                        <Avatar src={employee.avatar} alt={employee.name} sx={{ width: 48, height: 48 }}>
-                          {employee.name
-                            .split(" ")
-                            .map((n: string) => n[0])
-                            .join("")}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        sx={{ ml: 2 }}
-                        primary={
-                          <Box display='flex' alignItems='center' justifyContent='space-between'>
-                            <Box>
-                              <Typography variant='subtitle1' fontWeight='bold'>
-                                {employee.name}
-                              </Typography>
-                              <Typography variant='body2' color='textSecondary'>
-                                {employee.position}
-                              </Typography>
-                            </Box>
-                            <Box textAlign='right'>
-                              <Typography variant='h6' color='primary.main' fontWeight='bold'>
-                                {employee.workload}
-                              </Typography>
-                              <Typography variant='caption' color='textSecondary'>
-                                appointments
-                              </Typography>
-                            </Box>
-                          </Box>
-                        }
-                        secondary={
-                          <Box display='flex' alignItems='center' gap={0.5} mt={1}>
-                            <Typography variant='body2' color='textSecondary'>
-                              Rating:
-                            </Typography>
-                            <Typography variant='body2' color='warning.main' fontWeight='bold'>
-                              ⭐ {employee.rating}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
     </Box>
   );
 }

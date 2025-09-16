@@ -7,8 +7,6 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
   Grid,
   Chip,
   IconButton,
@@ -32,7 +30,7 @@ import {
   TableRow,
   Paper
 } from "@mui/material";
-import { Add, Edit, Delete, Visibility, VisibilityOff } from "@mui/icons-material";
+import { Add, Edit, Delete } from "@mui/icons-material";
 
 import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
 
