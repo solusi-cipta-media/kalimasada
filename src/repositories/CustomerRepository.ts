@@ -3,8 +3,31 @@ import database from "@/@libs/database";
 
 export default class CustomerRepository {
   async getAll() {
-    return await database.customer.findMany({
+    const customers = await database.customer.findMany({
+      include: {
+        appointments: {
+          select: {
+            date: true
+          },
+          orderBy: { date: "desc" }
+        }
+      },
       orderBy: { name: "asc" }
+    });
+
+    // Calculate totalVisits and lastVisit for each customer
+    return customers.map((customer) => {
+      const totalVisits = customer.appointments.length;
+
+      const lastVisit =
+        customer.appointments.length > 0 ? customer.appointments[0].date.toISOString().split("T")[0] : null;
+
+      return {
+        ...customer,
+        totalVisits,
+        lastVisit,
+        appointments: undefined // Remove appointments from response
+      };
     });
   }
 
@@ -28,25 +51,71 @@ export default class CustomerRepository {
   }
 
   async searchByName(name: string) {
-    return await database.customer.findMany({
+    const customers = await database.customer.findMany({
       where: {
         name: {
           contains: name,
           mode: "insensitive"
         }
       },
+      include: {
+        appointments: {
+          select: {
+            date: true
+          },
+          orderBy: { date: "desc" }
+        }
+      },
       orderBy: { name: "asc" }
+    });
+
+    // Calculate totalVisits and lastVisit for each customer
+    return customers.map((customer) => {
+      const totalVisits = customer.appointments.length;
+
+      const lastVisit =
+        customer.appointments.length > 0 ? customer.appointments[0].date.toISOString().split("T")[0] : null;
+
+      return {
+        ...customer,
+        totalVisits,
+        lastVisit,
+        appointments: undefined // Remove appointments from response
+      };
     });
   }
 
   async searchByPhone(phone: string) {
-    return await database.customer.findMany({
+    const customers = await database.customer.findMany({
       where: {
         phone: {
           contains: phone
         }
       },
+      include: {
+        appointments: {
+          select: {
+            date: true
+          },
+          orderBy: { date: "desc" }
+        }
+      },
       orderBy: { name: "asc" }
+    });
+
+    // Calculate totalVisits and lastVisit for each customer
+    return customers.map((customer) => {
+      const totalVisits = customer.appointments.length;
+
+      const lastVisit =
+        customer.appointments.length > 0 ? customer.appointments[0].date.toISOString().split("T")[0] : null;
+
+      return {
+        ...customer,
+        totalVisits,
+        lastVisit,
+        appointments: undefined // Remove appointments from response
+      };
     });
   }
 
@@ -98,6 +167,7 @@ export default class CustomerRepository {
 
   async getCustomerStats(customerId: number) {
     const customer = await this.getById(customerId);
+
     if (!customer) return null;
 
     const totalAppointments = customer.appointments.length;

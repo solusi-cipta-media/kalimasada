@@ -28,9 +28,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Avatar,
+  Card,
+  CardMedia
 } from "@mui/material";
-import { Add, Edit, Delete } from "@mui/icons-material";
+import { Add, Edit, Delete, CloudUpload, Close } from "@mui/icons-material";
 
 import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
 
@@ -41,6 +44,8 @@ interface Service {
   price: number;
   duration: number;
   category: string;
+  employeeCommission?: number;
+  image?: string;
   isActive: boolean;
 }
 
@@ -60,13 +65,17 @@ export default function LayananPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     duration: "",
-    category: ""
+    category: "",
+    employeeCommission: "",
+    image: ""
   });
 
   useEffect(() => {
@@ -99,8 +108,12 @@ export default function LayananPage() {
         description: service.description || "",
         price: service.price.toString(),
         duration: service.duration.toString(),
-        category: service.category
+        category: service.category,
+        employeeCommission: service.employeeCommission?.toString() || "",
+        image: service.image || ""
       });
+      setImagePreview(service.image || "");
+      setImageFile(null);
     } else {
       setEditingService(null);
       setFormData({
@@ -108,8 +121,12 @@ export default function LayananPage() {
         description: "",
         price: "",
         duration: "",
-        category: ""
+        category: "",
+        employeeCommission: "",
+        image: ""
       });
+      setImagePreview("");
+      setImageFile(null);
     }
 
     setDialogOpen(true);
@@ -123,8 +140,49 @@ export default function LayananPage() {
       description: "",
       price: "",
       duration: "",
-      category: ""
+      category: "",
+      employeeCommission: "",
+      image: ""
     });
+    setImagePreview("");
+    setImageFile(null);
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        Swal.fire(errorAlert.simple("Please select a valid image file"));
+
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        Swal.fire(errorAlert.simple("Image size must be less than 5MB"));
+
+        return;
+      }
+
+      setImageFile(file);
+
+      // Create preview
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+    setFormData({ ...formData, image: "" });
   };
 
   const handleSubmit = async () => {
@@ -132,18 +190,32 @@ export default function LayananPage() {
       const url = editingService ? `/api/services/${editingService.id}` : "/api/services";
       const method = editingService ? "PUT" : "POST";
 
+      // Prepare FormData for file upload
+      const formDataToSend = new FormData();
+
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("price", formData.price);
+      formDataToSend.append("duration", formData.duration);
+      formDataToSend.append("category", formData.category);
+
+      if (formData.description) {
+        formDataToSend.append("description", formData.description);
+      }
+
+      if (formData.employeeCommission) {
+        formDataToSend.append("employeeCommission", formData.employeeCommission);
+      }
+
+      if (imageFile) {
+        formDataToSend.append("image", imageFile);
+      } else if (formData.image && !imageFile && editingService) {
+        // Keep existing image URL if no new file is selected
+        formDataToSend.append("existingImage", formData.image);
+      }
+
       const response = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description || undefined,
-          price: parseFloat(formData.price),
-          duration: parseInt(formData.duration),
-          category: formData.category
-        })
+        body: formDataToSend
       });
 
       const result = await response.json();
@@ -279,9 +351,11 @@ export default function LayananPage() {
           <TableHead>
             <TableRow>
               <TableCell>Nama Layanan</TableCell>
+              <TableCell>Gambar</TableCell>
               <TableCell>Kategori</TableCell>
               <TableCell>Harga</TableCell>
               <TableCell>Durasi</TableCell>
+              <TableCell>Komisi</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align='center'>Aksi</TableCell>
             </TableRow>
@@ -300,6 +374,20 @@ export default function LayananPage() {
                   </Box>
                 </TableCell>
                 <TableCell>
+                  {service.image ? (
+                    <Avatar
+                      src={`/uploads/${service.image}`}
+                      alt={service.name}
+                      sx={{ width: 50, height: 50 }}
+                      variant='rounded'
+                    />
+                  ) : (
+                    <Avatar sx={{ width: 50, height: 50 }} variant='rounded'>
+                      <Typography variant='body2'>{service.name.charAt(0).toUpperCase()}</Typography>
+                    </Avatar>
+                  )}
+                </TableCell>
+                <TableCell>
                   <Chip
                     label={getCategoryLabel(service.category)}
                     color={getCategoryColor(service.category)}
@@ -310,6 +398,15 @@ export default function LayananPage() {
                   <Typography variant='subtitle2'>{formatCurrency(service.price)}</Typography>
                 </TableCell>
                 <TableCell>{formatDuration(service.duration)}</TableCell>
+                <TableCell>
+                  {service.employeeCommission ? (
+                    <Typography variant='body2'>{formatCurrency(service.employeeCommission)}</Typography>
+                  ) : (
+                    <Typography variant='body2' color='textSecondary'>
+                      -
+                    </Typography>
+                  )}
+                </TableCell>
                 <TableCell>
                   <FormControlLabel
                     control={
@@ -382,6 +479,73 @@ export default function LayananPage() {
                 />
               </Grid>
             </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label='Komisi Karyawan'
+                  value={formData.employeeCommission}
+                  onChange={(e) => setFormData({ ...formData, employeeCommission: e.target.value })}
+                  fullWidth
+                  type='number'
+                  inputProps={{
+                    min: 0,
+                    step: 1
+                  }}
+                  InputProps={{
+                    startAdornment: <InputAdornment position='start'>Rp</InputAdornment>
+                  }}
+                  helperText='Komisi dalam rupiah yang akan diterima karyawan dari layanan ini'
+                />
+              </Grid>
+            </Grid>
+
+            {/* Image Upload Section */}
+            <Box>
+              <Typography variant='h6' gutterBottom>
+                Gambar Layanan
+              </Typography>
+              <input
+                accept='image/*'
+                style={{ display: "none" }}
+                id='image-upload'
+                type='file'
+                onChange={handleImageChange}
+              />
+              <label htmlFor='image-upload'>
+                <Button variant='outlined' component='span' startIcon={<CloudUpload />} fullWidth sx={{ mb: 2 }}>
+                  Upload Gambar
+                </Button>
+              </label>
+
+              {(imagePreview || formData.image) && (
+                <Box position='relative' display='inline-block'>
+                  <Card sx={{ maxWidth: 200 }}>
+                    <CardMedia
+                      component='img'
+                      height='140'
+                      image={imagePreview || formData.image}
+                      alt='Service preview'
+                    />
+                  </Card>
+                  <IconButton
+                    onClick={handleRemoveImage}
+                    sx={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      backgroundColor: "rgba(255, 255, 255, 0.8)",
+                      "&:hover": {
+                        backgroundColor: "rgba(255, 255, 255, 0.9)"
+                      }
+                    }}
+                    size='small'
+                  >
+                    <Close />
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
 
             <FormControl fullWidth required>
               <InputLabel>Kategori</InputLabel>

@@ -2,13 +2,12 @@
 import { useEffect, useState } from "react";
 
 import Swal from "sweetalert2";
+import axios from "axios";
 
 import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
   Grid,
   Chip,
   IconButton,
@@ -50,6 +49,7 @@ interface Customer {
 export default function CustomerPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
@@ -69,46 +69,14 @@ export default function CustomerPage() {
 
   const fetchCustomers = async () => {
     try {
-      // TODO: Implement API call to fetch customers
-      // For now, using mock data
-      setCustomers([
-        {
-          id: 1,
-          name: "Sarah Johnson",
-          email: "sarah.johnson@email.com",
-          phone: "+62812345671001",
-          address: "Jl. Sunset Road No. 123, Seminyak",
-          birthDate: "1985-06-15",
-          gender: "FEMALE",
-          totalVisits: 12,
-          lastVisit: "2024-09-05"
-        },
-        {
-          id: 2,
-          name: "Michael Chen",
-          email: "michael.chen@email.com",
-          phone: "+62812345671002",
-          address: "Jl. Monkey Forest Road No. 45, Ubud",
-          birthDate: "1978-11-22",
-          gender: "MALE",
-          totalVisits: 8,
-          lastVisit: "2024-09-03"
-        },
-        {
-          id: 3,
-          name: "Lisa Anderson",
-          email: "lisa.anderson@email.com",
-          phone: "+62812345671003",
-          address: "Jl. Pantai Kuta No. 78, Kuta",
-          birthDate: "1992-03-08",
-          gender: "FEMALE",
-          totalVisits: 15,
-          lastVisit: "2024-09-08"
-        }
-      ]);
-      setLoading(false);
+      setLoading(true);
+      const response = await axios.get("/api/customer");
+
+      setCustomers(response.data.data || []);
     } catch (error) {
       console.error("Error fetching customers:", error);
+      Swal.fire(errorAlert.network());
+    } finally {
       setLoading(false);
     }
   };
@@ -157,16 +125,33 @@ export default function CustomerPage() {
 
   const handleSubmit = async () => {
     try {
-      // TODO: Implement API call to save customer
-      console.log("Saving customer:", formData);
+      setSubmitting(true);
+
+      const customerData = {
+        name: formData.name,
+        email: formData.email || null,
+        phone: formData.phone,
+        address: formData.address || null,
+        birthDate: formData.birthDate || null,
+        gender: formData.gender || null,
+        notes: formData.notes || null
+      };
+
+      if (editingCustomer) {
+        await axios.put(`/api/customer/${editingCustomer.id}`, customerData);
+        Swal.fire(successAlert.timer("Customer berhasil diperbarui!"));
+      } else {
+        await axios.post("/api/customer", customerData);
+        Swal.fire(successAlert.timer("Customer berhasil ditambahkan!"));
+      }
+
       await fetchCustomers();
       handleCloseDialog();
-
-      // TODO: Show success toast
     } catch (error) {
       console.error("Error saving customer:", error);
-
-      // TODO: Show error toast
+      Swal.fire(errorAlert.network());
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -175,10 +160,8 @@ export default function CustomerPage() {
 
     if (result.isConfirmed) {
       try {
-        // TODO: Implement API call to delete customer
-        console.log("Deleting customer:", customer.id);
+        await axios.delete(`/api/customer/${customer.id}`);
         await fetchCustomers();
-
         Swal.fire(successAlert.timer("Customer berhasil dihapus!"));
       } catch (error) {
         console.error("Error deleting customer:", error);
@@ -400,8 +383,8 @@ export default function CustomerPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Batal</Button>
-          <Button onClick={handleSubmit} variant='contained' disabled={!formData.name || !formData.phone}>
-            {editingCustomer ? "Update" : "Simpan"}
+          <Button onClick={handleSubmit} variant='contained' disabled={!formData.name || !formData.phone || submitting}>
+            {submitting ? "Menyimpan..." : editingCustomer ? "Update" : "Simpan"}
           </Button>
         </DialogActions>
       </Dialog>

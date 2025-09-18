@@ -36,7 +36,19 @@ import {
   Tabs,
   Tab
 } from "@mui/material";
-import { Add, Edit, Delete, AccessTime, Person, Spa, Schedule as ScheduleIcon } from "@mui/icons-material";
+import {
+  Add,
+  Edit,
+  Delete,
+  AccessTime,
+  Person,
+  Spa,
+  Schedule as ScheduleIcon,
+  Payment,
+  EventAvailable,
+  CheckCircle,
+  Cancel
+} from "@mui/icons-material";
 
 import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
 
@@ -106,6 +118,14 @@ export default function JadwalPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [tabValue, setTabValue] = useState(0);
 
+  // Statistics state
+  const [statistics, setStatistics] = useState({
+    menungguPembayaran: 0,
+    terjadwal: 0,
+    selesai: 0,
+    dibatalkan: 0
+  });
+
   const [formData, setFormData] = useState<FormData>({
     customerId: "",
     employeeId: "",
@@ -170,17 +190,32 @@ export default function JadwalPage() {
 
       if (result.success) {
         setAppointments(result.data || []);
+        calculateStatistics(result.data || []);
       } else {
         console.error("Failed to fetch appointments:", result.message);
         setAppointments([]);
+        calculateStatistics([]);
       }
     } catch (error) {
       console.error("Error fetching appointments:", error);
       setAppointments([]);
+      calculateStatistics([]);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Calculate appointment statistics
+  const calculateStatistics = (appointmentsData: Appointment[]) => {
+    const stats = {
+      menungguPembayaran: appointmentsData.filter((apt) => apt.status === "CONFIRMED").length,
+      terjadwal: appointmentsData.filter((apt) => apt.status === "SCHEDULED").length,
+      selesai: appointmentsData.filter((apt) => apt.status === "COMPLETED").length,
+      dibatalkan: appointmentsData.filter((apt) => apt.status === "CANCELLED" || apt.status === "NO_SHOW").length
+    };
+
+    setStatistics(stats);
+  };
 
   useEffect(() => {
     fetchCustomers();
@@ -432,6 +467,81 @@ export default function JadwalPage() {
           Buat Appointment
         </Button>
       </Box>
+
+      {/* Statistics Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display='flex' alignItems='center' gap={2}>
+                <Payment color='warning' sx={{ fontSize: 40 }} />
+                <Box>
+                  <Typography variant='h4' component='div' color='warning.main'>
+                    {statistics.menungguPembayaran}
+                  </Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Menunggu Pembayaran
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display='flex' alignItems='center' gap={2}>
+                <EventAvailable color='primary' sx={{ fontSize: 40 }} />
+                <Box>
+                  <Typography variant='h4' component='div' color='primary.main'>
+                    {statistics.terjadwal}
+                  </Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Terjadwal
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display='flex' alignItems='center' gap={2}>
+                <CheckCircle color='success' sx={{ fontSize: 40 }} />
+                <Box>
+                  <Typography variant='h4' component='div' color='success.main'>
+                    {statistics.selesai}
+                  </Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Selesai
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display='flex' alignItems='center' gap={2}>
+                <Cancel color='error' sx={{ fontSize: 40 }} />
+                <Box>
+                  <Typography variant='h4' component='div' color='error.main'>
+                    {statistics.dibatalkan}
+                  </Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Dibatalkan
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* Date Selector */}
       <Card sx={{ mb: 3 }}>

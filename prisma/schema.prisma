@@ -101,6 +101,8 @@ model Service {
   price               Decimal              @db.Decimal(10, 2)
   duration            Int // in minutes
   category            ServiceCategory
+  employeeCommission  Decimal?             @db.Decimal(10, 2) // commission amount in rupiah for employees
+  image               String?              @db.Text // image URL or path
   isActive            Boolean              @default(true)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

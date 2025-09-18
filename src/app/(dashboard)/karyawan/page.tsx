@@ -45,7 +45,6 @@ interface Employee {
   phone?: string;
   position: string;
   salary: number;
-  commission?: number;
   avatar?: string;
   isActive: boolean;
   hireDate: string;
@@ -81,7 +80,6 @@ export default function EmployeePage() {
     phone: "",
     position: "",
     salary: "",
-    commission: "",
     isActive: true,
     hireDate: ""
   });
@@ -137,7 +135,6 @@ export default function EmployeePage() {
         phone: employee.phone || "",
         position: employee.position,
         salary: employee.salary.toString(),
-        commission: employee.commission?.toString() || "",
         isActive: employee.isActive,
         hireDate: employee.hireDate ? employee.hireDate.split("T")[0] : ""
       });
@@ -149,7 +146,6 @@ export default function EmployeePage() {
         phone: "",
         position: "",
         salary: "",
-        commission: "",
         isActive: true,
         hireDate: new Date().toISOString().split("T")[0]
       });
@@ -167,7 +163,6 @@ export default function EmployeePage() {
       phone: "",
       position: "",
       salary: "",
-      commission: "",
       isActive: true,
       hireDate: ""
     });
@@ -182,7 +177,6 @@ export default function EmployeePage() {
         salary: parseFloat(formData.salary),
         isActive: formData.isActive,
         ...(formData.phone && { phone: formData.phone }),
-        ...(formData.commission && { commission: parseFloat(formData.commission) }),
         ...(formData.hireDate && { hireDate: formData.hireDate })
       };
 
@@ -472,9 +466,6 @@ export default function EmployeePage() {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Typography variant='body2'>{employee.commission ? `${employee.commission}%` : "-"}</Typography>
-                  </TableCell>
-                  <TableCell>
                     <Chip
                       label={employee.isActive ? "Aktif" : "Tidak Aktif"}
                       color={employee.isActive ? "success" : "default"}
@@ -571,18 +562,6 @@ export default function EmployeePage() {
                   required
                   InputProps={{
                     startAdornment: <Typography variant='body2'>Rp</Typography>
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label='Komisi (%)'
-                  type='number'
-                  value={formData.commission}
-                  onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
-                  fullWidth
-                  InputProps={{
-                    endAdornment: <Typography variant='body2'>%</Typography>
                   }}
                 />
               </Grid>

@@ -11,6 +11,21 @@ const nextConfig = {
   i18n,
   publicRuntimeConfig: {
     version: version
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/uploads/:path*",
+        destination: "/api/uploads/:path*"
+      }
+    ];
+  },
+
+  // Handle network issues with external font loading
+  images: {
+    dangerouslyAllowSVG: true,
+    contentDispositionType: "attachment",
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;"
   }
 };
 

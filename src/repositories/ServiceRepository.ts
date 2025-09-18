@@ -31,12 +31,22 @@ export default class ServiceRepository {
     });
   }
 
-  async create(data: { name: string; description?: string; price: number; duration: number; category: string }) {
+  async create(data: {
+    name: string;
+    description?: string;
+    price: number;
+    duration: number;
+    category: string;
+    employeeCommission?: number;
+    image?: string;
+  }) {
     return await database.service.create({
       data: {
         ...data,
         price: data.price,
-        category: data.category as any
+        category: data.category as any,
+        ...(data.employeeCommission !== undefined && { employeeCommission: data.employeeCommission }),
+        ...(data.image && { image: data.image })
       }
     });
   }
@@ -49,6 +59,8 @@ export default class ServiceRepository {
       price?: number;
       duration?: number;
       category?: string;
+      employeeCommission?: number;
+      image?: string;
       isActive?: boolean;
     }
   ) {
@@ -56,7 +68,9 @@ export default class ServiceRepository {
       where: { id },
       data: {
         ...data,
-        ...(data.category && { category: data.category as any })
+        ...(data.category && { category: data.category as any }),
+        ...(data.employeeCommission !== undefined && { employeeCommission: data.employeeCommission }),
+        ...(data.image !== undefined && { image: data.image })
       }
     });
   }
@@ -69,6 +83,7 @@ export default class ServiceRepository {
 
   async toggleActive(id: number) {
     const service = await this.getById(id);
+
     if (!service) throw new Error("Service not found");
 
     return await database.service.update({
