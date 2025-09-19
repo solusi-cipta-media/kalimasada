@@ -39,7 +39,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const body = await request.json();
-    const { customerId, employeeId, date, startTime, endTime, status, notes } = body;
+
+    const {
+      customerId,
+      employeeId,
+      date,
+      startTime,
+      endTime,
+      status,
+      notes,
+      tipeLayanan,
+      upahLembur,
+      uangBensin,
+      commissionAmount
+    } = body;
 
     const appointmentRepo = new AppointmentRepository();
 
@@ -57,7 +70,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       ...(startTime && { startTime: new Date(startTime) }),
       ...(endTime && { endTime: new Date(endTime) }),
       ...(status && { status }),
-      ...(notes !== undefined && { notes })
+      ...(notes !== undefined && { notes }),
+      ...(tipeLayanan && { tipeLayanan }),
+      ...(upahLembur !== undefined && { upahLembur: parseFloat(upahLembur) }),
+      ...(uangBensin !== undefined && { uangBensin: parseFloat(uangBensin) }),
+      ...(commissionAmount !== undefined && { commissionAmount: parseFloat(commissionAmount) })
     };
 
     const updatedAppointment = await appointmentRepo.update(id, updateData);

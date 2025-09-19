@@ -63,6 +63,7 @@ const serviceCategories = [
 export default function LayananPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -187,6 +188,8 @@ export default function LayananPage() {
 
   const handleSubmit = async () => {
     try {
+      setSubmitting(true);
+
       const url = editingService ? `/api/services/${editingService.id}` : "/api/services";
       const method = editingService ? "PUT" : "POST";
 
@@ -223,17 +226,18 @@ export default function LayananPage() {
       if (response.ok) {
         await fetchServices();
         handleCloseDialog();
-
-        // TODO: Show success toast
+        Swal.fire(
+          successAlert.timer(editingService ? "Layanan berhasil diperbarui!" : "Layanan berhasil ditambahkan!")
+        );
       } else {
         console.error("Error saving service:", result.message);
-
-        // TODO: Show error toast
+        Swal.fire(errorAlert.network());
       }
     } catch (error) {
       console.error("Error saving service:", error);
-
-      // TODO: Show error toast
+      Swal.fire(errorAlert.network());
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -568,9 +572,9 @@ export default function LayananPage() {
           <Button
             onClick={handleSubmit}
             variant='contained'
-            disabled={!formData.name || !formData.price || !formData.duration || !formData.category}
+            disabled={!formData.name || !formData.price || !formData.duration || !formData.category || submitting}
           >
-            {editingService ? "Update" : "Simpan"}
+            {submitting ? "Menyimpan..." : editingService ? "Update" : "Simpan"}
           </Button>
         </DialogActions>
       </Dialog>

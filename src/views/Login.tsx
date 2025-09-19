@@ -13,7 +13,6 @@ import InputAdornment from "@mui/material/InputAdornment";
 import Checkbox from "@mui/material/Checkbox";
 import Button from "@mui/material/Button";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import Divider from "@mui/material/Divider";
 
 // Third-party Imports
 import classnames from "classnames";
@@ -22,7 +21,6 @@ import classnames from "classnames";
 import type { SystemMode } from "@core/types";
 
 // Component Imports
-import Link from "@components/Link";
 import Logo from "@components/layout/shared/Logo";
 import CustomTextField from "@core/components/mui/TextField";
 
@@ -129,8 +127,10 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
 
     try {
       await requestLogin({ email: formData.email, password: formData.password });
+
       // Clear any error
       setErrorText(null);
+
       // Redirect to home page
       setTimeout(() => {
         window.location.href = "/home";
@@ -215,34 +215,10 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
             />
             <div className='flex justify-between items-center gap-x-3 gap-y-1 flex-wrap'>
               <FormControlLabel control={<Checkbox />} label='Remember me' />
-              <Typography className='text-end' color='primary' component={Link}>
-                Forgot password?
-              </Typography>
             </div>
             <Button fullWidth variant='contained' type='submit' disabled={loading}>
               Login
             </Button>
-            <div className='flex justify-center items-center flex-wrap gap-2'>
-              <Typography>New on our platform?</Typography>
-              <Typography component={Link} color='primary'>
-                Create an account
-              </Typography>
-            </div>
-            <Divider className='gap-2 text-textPrimary'>or</Divider>
-            <div className='flex justify-center items-center gap-1.5'>
-              <IconButton className='text-facebook' size='small'>
-                <i className='tabler-brand-facebook-filled' />
-              </IconButton>
-              <IconButton className='text-twitter' size='small'>
-                <i className='tabler-brand-twitter-filled' />
-              </IconButton>
-              <IconButton className='text-textPrimary' size='small'>
-                <i className='tabler-brand-github-filled' />
-              </IconButton>
-              <IconButton className='text-error' size='small'>
-                <i className='tabler-brand-google-filled' />
-              </IconButton>
-            </div>
           </form>
         </div>
       </div>

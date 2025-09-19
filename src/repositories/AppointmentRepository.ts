@@ -34,9 +34,11 @@ export default class AppointmentRepository {
 
   async getByDate(date: Date) {
     const startOfDay = new Date(date);
+
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date(date);
+
     endOfDay.setHours(23, 59, 59, 999);
 
     return await database.appointment.findMany({
@@ -85,9 +87,11 @@ export default class AppointmentRepository {
 
     if (date) {
       const startOfDay = new Date(date);
+
       startOfDay.setHours(0, 0, 0, 0);
 
       const endOfDay = new Date(date);
+
       endOfDay.setHours(23, 59, 59, 999);
 
       whereClause.date = {
@@ -135,6 +139,10 @@ export default class AppointmentRepository {
     endTime: Date;
     serviceIds: number[];
     notes?: string;
+    tipeLayanan?: string;
+    upahLembur?: number;
+    uangBensin?: number;
+    commissionAmount?: number;
   }) {
     const { serviceIds, ...appointmentData } = data;
 
@@ -183,6 +191,10 @@ export default class AppointmentRepository {
       status?: string;
       notes?: string;
       serviceIds?: number[];
+      tipeLayanan?: string;
+      upahLembur?: number;
+      uangBensin?: number;
+      commissionAmount?: number;
     }
   ) {
     const { serviceIds, ...updateData } = data;
@@ -310,9 +322,11 @@ export default class AppointmentRepository {
 
   async getDashboardStats() {
     const today = new Date();
+
     today.setHours(0, 0, 0, 0);
 
     const tomorrow = new Date(today);
+
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -344,6 +358,7 @@ export default class AppointmentRepository {
 
     // Upcoming appointments (next 7 days)
     const nextWeek = new Date(today);
+
     nextWeek.setDate(nextWeek.getDate() + 7);
 
     const upcomingAppointments = await database.appointment.findMany({

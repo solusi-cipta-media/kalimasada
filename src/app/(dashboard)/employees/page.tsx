@@ -40,7 +40,6 @@ interface Employee {
   phone?: string;
   position: string;
   salary: number;
-  commission?: number;
   avatar?: string;
   isActive: boolean;
   hireDate: string;
@@ -57,8 +56,7 @@ export default function KaryawanPage() {
     email: "",
     phone: "",
     position: "",
-    salary: "",
-    commission: ""
+    salary: ""
   });
 
   useEffect(() => {
@@ -77,7 +75,6 @@ export default function KaryawanPage() {
           phone: "+62812345678901",
           position: "Senior Therapist",
           salary: 4500000,
-          commission: 10,
           isActive: true,
           hireDate: "2023-01-15"
         },
@@ -88,7 +85,6 @@ export default function KaryawanPage() {
           phone: "+62812345678902",
           position: "Massage Therapist",
           salary: 3500000,
-          commission: 8,
           isActive: true,
           hireDate: "2023-03-20"
         },
@@ -99,7 +95,6 @@ export default function KaryawanPage() {
           phone: "+62812345678903",
           position: "Facial Specialist",
           salary: 4000000,
-          commission: 12,
           isActive: true,
           hireDate: "2023-02-10"
         }
@@ -119,8 +114,7 @@ export default function KaryawanPage() {
         email: employee.email,
         phone: employee.phone || "",
         position: employee.position,
-        salary: employee.salary.toString(),
-        commission: employee.commission?.toString() || ""
+        salary: employee.salary.toString()
       });
     } else {
       setEditingEmployee(null);
@@ -129,8 +123,7 @@ export default function KaryawanPage() {
         email: "",
         phone: "",
         position: "",
-        salary: "",
-        commission: ""
+        salary: ""
       });
     }
 
@@ -145,8 +138,7 @@ export default function KaryawanPage() {
       email: "",
       phone: "",
       position: "",
-      salary: "",
-      commission: ""
+      salary: ""
     });
   };
 
@@ -249,7 +241,6 @@ export default function KaryawanPage() {
               <TableCell>Karyawan</TableCell>
               <TableCell>Posisi</TableCell>
               <TableCell>Gaji Pokok</TableCell>
-              <TableCell>Komisi</TableCell>
               <TableCell>Tanggal Masuk</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align='center'>Aksi</TableCell>
@@ -282,7 +273,6 @@ export default function KaryawanPage() {
                 <TableCell>
                   <Typography variant='subtitle2'>{formatCurrency(employee.salary)}</Typography>
                 </TableCell>
-                <TableCell>{employee.commission ? `${employee.commission}%` : "-"}</TableCell>
                 <TableCell>{formatDate(employee.hireDate)}</TableCell>
                 <TableCell>
                   <FormControlLabel
@@ -354,18 +344,6 @@ export default function KaryawanPage() {
                   type='number'
                   InputProps={{
                     startAdornment: <InputAdornment position='start'>Rp</InputAdornment>
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label='Komisi'
-                  value={formData.commission}
-                  onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
-                  fullWidth
-                  type='number'
-                  InputProps={{
-                    endAdornment: <InputAdornment position='end'>%</InputAdornment>
                   }}
                 />
               </Grid>

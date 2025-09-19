@@ -83,14 +83,18 @@ export const validateImageType = async (mimeType: string) => {
   }
 };
 
-export const responseError = (error: ResponseError) => {
+export const responseError = (error: any) => {
+  const isResponseError = error instanceof ResponseError;
+  const statusCode = isResponseError ? error.statusCode : 500;
+  const message = error.message || "An unexpected error occurred";
+
   return NextResponse.json(
     {
-      message: error.message
+      message: message
     },
     {
-      status: error.statusCode,
-      statusText: error.message
+      status: statusCode,
+      statusText: message
     }
   );
 };

@@ -1,5 +1,6 @@
 import "server-only";
 import database from "@/@libs/database";
+import { ResponseError } from "@/types/errors";
 
 export default class PayrollRepository {
   async getAll() {
@@ -80,7 +81,7 @@ export default class PayrollRepository {
     });
 
     if (existingGeneration) {
-      throw new Error(`Payroll generation for ${month}/${year} already exists`);
+      throw new ResponseError(`Payroll generation for ${month}/${year} already exists`, 400);
     }
 
     const results = [];
@@ -114,8 +115,13 @@ export default class PayrollRepository {
         }
       });
 
-      const totalRevenue = appointments.reduce((sum, apt) => sum + Number(apt.totalPrice), 0);
-      const commissionAmount = (totalRevenue * Number(employee.commission || 0)) / 100;
+      // Sum up commission amounts from all completed appointments
+      const commissionAmount = appointments.reduce((sum, apt) => {
+        const commission = apt.commissionAmount ? Number(apt.commissionAmount) : 0;
+
+        return sum + commission;
+      }, 0);
+
       const totalSalary = Number(employee.salary) + commissionAmount;
 
       const payroll = await database.payroll.create({
@@ -166,7 +172,7 @@ export default class PayrollRepository {
   ) {
     const payroll = await this.getById(id);
 
-    if (!payroll) throw new Error("Payroll not found");
+    if (!payroll) throw new ResponseError("Payroll not found", 404);
 
     const updatedData: any = { ...data };
 

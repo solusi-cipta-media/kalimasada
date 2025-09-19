@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterMoment } from "@mui/x-date-pickers/AdapterMoment";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import moment from "moment";
 
 import {
@@ -43,11 +44,12 @@ import {
   AccessTime,
   Person,
   Spa,
-  Schedule as ScheduleIcon,
   Payment,
   EventAvailable,
   CheckCircle,
-  Cancel
+  Cancel,
+  Clear,
+  FilterList
 } from "@mui/icons-material";
 
 import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
@@ -57,6 +59,7 @@ interface Customer {
   name: string;
   email: string;
   phone: string;
+  address?: string;
 }
 
 interface Employee {
@@ -96,6 +99,10 @@ interface FormData {
   startTime: moment.Moment | null;
   endTime: moment.Moment | null;
   notes: string;
+  tipeLayanan: string;
+  upahLembur: string;
+  uangBensin: string;
+  commissionAmount: string;
 }
 
 const appointmentStatuses = [
@@ -107,16 +114,40 @@ const appointmentStatuses = [
   { value: "NO_SHOW", label: "Tidak Hadir", color: "error" as const }
 ];
 
+// Helper function to format time to HH:MM
+const formatTime = (timeString: string) => {
+  try {
+    const date = new Date(timeString);
+
+    return date.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    });
+  } catch (error) {
+    return timeString;
+  }
+};
+
 export default function JadwalPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [tabValue, setTabValue] = useState(0);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    dateFrom: null as moment.Moment | null,
+    dateTo: null as moment.Moment | null,
+    serviceId: "",
+    employeeId: "",
+    status: ""
+  });
 
   // Statistics state
   const [statistics, setStatistics] = useState({
@@ -133,8 +164,16 @@ export default function JadwalPage() {
     date: new Date().toISOString().split("T")[0],
     startTime: null,
     endTime: null,
-    notes: ""
+    notes: "",
+    tipeLayanan: "DI_TEMPAT",
+    upahLembur: "0",
+    uangBensin: "0",
+    commissionAmount: "0"
   });
+
+  // Helper states for displaying selected customer and service details
+  const selectedCustomer = customers.find((c) => c.id.toString() === formData.customerId);
+  const selectedService = services.find((s) => s.id.toString() === formData.serviceId);
 
   const fetchCustomers = async () => {
     try {
@@ -232,9 +271,13 @@ export default function JadwalPage() {
         employeeId: appointment.employeeId.toString(),
         serviceId: appointment.services?.[0]?.service?.id?.toString() || "",
         date: appointment.date,
-        startTime: moment(appointment.startTime, "HH:mm"),
-        endTime: moment(appointment.endTime, "HH:mm"),
-        notes: appointment.notes || ""
+        startTime: moment(appointment.startTime),
+        endTime: moment(appointment.endTime),
+        notes: appointment.notes || "",
+        tipeLayanan: appointment.tipeLayanan || "DI_TEMPAT",
+        upahLembur: appointment.upahLembur?.toString() || "0",
+        uangBensin: appointment.uangBensin?.toString() || "0",
+        commissionAmount: appointment.commissionAmount?.toString() || "0"
       });
     } else {
       setEditingAppointment(null);
@@ -242,10 +285,14 @@ export default function JadwalPage() {
         customerId: "",
         employeeId: "",
         serviceId: "",
-        date: selectedDate,
+        date: new Date().toISOString().split("T")[0],
         startTime: null,
         endTime: null,
-        notes: ""
+        notes: "",
+        tipeLayanan: "DI_TEMPAT",
+        upahLembur: "0",
+        uangBensin: "0",
+        commissionAmount: "0"
       });
     }
 
@@ -293,6 +340,8 @@ export default function JadwalPage() {
 
   const handleSubmit = async () => {
     try {
+      setSubmitting(true);
+
       // Validate required fields
       if (
         !formData.customerId ||
@@ -311,19 +360,30 @@ export default function JadwalPage() {
         return;
       }
 
-      const selectedService = services.find((s) => s.id.toString() === formData.serviceId);
+      // Create proper DateTime objects for the API
+      const appointmentDate = new Date(formData.date);
+      const startDateTime = new Date(formData.date);
+      const endDateTime = new Date(formData.date);
+
+      // Set the time components
+      startDateTime.setHours(formData.startTime!.hour(), formData.startTime!.minute(), 0, 0);
+      endDateTime.setHours(formData.endTime!.hour(), formData.endTime!.minute(), 0, 0);
 
       const appointmentData = {
         customerId: parseInt(formData.customerId),
         employeeId: parseInt(formData.employeeId),
         serviceIds: [parseInt(formData.serviceId)],
-        date: formData.date,
-        startTime: formData.startTime.format("HH:mm"),
-        endTime: formData.endTime.format("HH:mm"),
-        status: "SCHEDULED",
+        date: appointmentDate.toISOString(),
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
         notes: formData.notes,
-        totalPrice: selectedService?.price || 0
+        tipeLayanan: formData.tipeLayanan,
+        upahLembur: parseFloat(formData.upahLembur),
+        uangBensin: parseFloat(formData.uangBensin),
+        commissionAmount: parseFloat(formData.commissionAmount)
       };
+
+      console.log("Sending appointment data:", appointmentData);
 
       const url = editingAppointment ? `/api/appointment/${editingAppointment.id}` : "/api/appointment";
       const method = editingAppointment ? "PUT" : "POST";
@@ -336,7 +396,11 @@ export default function JadwalPage() {
         body: JSON.stringify(appointmentData)
       });
 
+      console.log("Response status:", response.status);
+
       const result = await response.json();
+
+      console.log("Response data:", result);
 
       if (result.success) {
         await fetchAppointments();
@@ -349,11 +413,21 @@ export default function JadwalPage() {
       }
     } catch (error) {
       console.error("Error saving appointment:", error);
+
+      // Show more specific error message
+      let errorMessage = "Terjadi kesalahan saat menyimpan appointment";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       await Swal.fire({
         title: "Error!",
-        text: "Terjadi kesalahan saat menyimpan appointment",
+        text: errorMessage,
         icon: "error"
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -422,20 +496,72 @@ export default function JadwalPage() {
     }).format(amount);
   };
 
-  const getStatusInfo = (status: string) => {
-    return appointmentStatuses.find((s) => s.value === status) || appointmentStatuses[0];
+  const getFilteredAppointments = () => {
+    let filteredAppointments = [...appointments];
+
+    // Apply date range filter
+    if (filters.dateFrom) {
+      const fromDate = filters.dateFrom.format("YYYY-MM-DD");
+
+      filteredAppointments = filteredAppointments.filter((apt) => {
+        const appointmentDate = apt.date.split("T")[0];
+
+        return appointmentDate >= fromDate;
+      });
+    }
+
+    if (filters.dateTo) {
+      const toDate = filters.dateTo.format("YYYY-MM-DD");
+
+      filteredAppointments = filteredAppointments.filter((apt) => {
+        const appointmentDate = apt.date.split("T")[0];
+
+        return appointmentDate <= toDate;
+      });
+    }
+
+    // Apply service filter
+    if (filters.serviceId) {
+      filteredAppointments = filteredAppointments.filter((apt) =>
+        apt.services?.some((service) => service.service.id.toString() === filters.serviceId)
+      );
+    }
+
+    // Apply employee filter
+    if (filters.employeeId) {
+      filteredAppointments = filteredAppointments.filter((apt) => apt.employeeId.toString() === filters.employeeId);
+    }
+
+    // Apply status filter
+    if (filters.status) {
+      filteredAppointments = filteredAppointments.filter((apt) => apt.status === filters.status);
+    }
+
+    return filteredAppointments;
   };
 
   const getTodayAppointments = () => {
     const today = new Date().toISOString().split("T")[0];
+    const filtered = getFilteredAppointments();
 
-    return appointments.filter((apt) => apt.date === today);
+    return filtered.filter((apt) => {
+      // Handle both date string formats: "YYYY-MM-DD" or full ISO DateTime
+      const appointmentDate = apt.date.split("T")[0];
+
+      return appointmentDate === today;
+    });
   };
 
   const getUpcomingAppointments = () => {
     const today = new Date().toISOString().split("T")[0];
+    const filtered = getFilteredAppointments();
 
-    return appointments.filter((apt) => apt.date > today);
+    return filtered.filter((apt) => {
+      // Handle both date string formats: "YYYY-MM-DD" or full ISO DateTime
+      const appointmentDate = apt.date.split("T")[0];
+
+      return appointmentDate > today;
+    });
   };
 
   const getCurrentAppointments = () => {
@@ -445,7 +571,7 @@ export default function JadwalPage() {
       case 1:
         return getUpcomingAppointments();
       default:
-        return appointments;
+        return getFilteredAppointments();
     }
   };
 
@@ -543,19 +669,121 @@ export default function JadwalPage() {
         </Grid>
       </Grid>
 
-      {/* Date Selector */}
+      {/* Comprehensive Filters */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box display='flex' alignItems='center' gap={2}>
-            <ScheduleIcon color='primary' />
-            <Typography variant='h6'>Filter Tanggal</Typography>
-            <TextField
-              type='date'
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+          <Box display='flex' alignItems='center' gap={2} mb={2}>
+            <FilterList color='primary' />
+            <Typography variant='h6'>Filter Jadwal</Typography>
+            <Button
+              startIcon={<Clear />}
+              onClick={() =>
+                setFilters({
+                  dateFrom: null,
+                  dateTo: null,
+                  serviceId: "",
+                  employeeId: "",
+                  status: ""
+                })
+              }
               size='small'
-            />
+              variant='outlined'
+            >
+              Reset Filter
+            </Button>
           </Box>
+
+          <Grid container spacing={3}>
+            {/* Date Range Filter */}
+            <Grid item xs={12} md={3}>
+              <LocalizationProvider dateAdapter={AdapterMoment}>
+                <DatePicker
+                  label='Tanggal Dari'
+                  value={filters.dateFrom}
+                  onChange={(newValue) => setFilters((prev) => ({ ...prev, dateFrom: newValue }))}
+                  slotProps={{
+                    textField: {
+                      size: "small",
+                      fullWidth: true
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+
+            <Grid item xs={12} md={3}>
+              <LocalizationProvider dateAdapter={AdapterMoment}>
+                <DatePicker
+                  label='Tanggal Sampai'
+                  value={filters.dateTo}
+                  onChange={(newValue) => setFilters((prev) => ({ ...prev, dateTo: newValue }))}
+                  slotProps={{
+                    textField: {
+                      size: "small",
+                      fullWidth: true
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+
+            {/* Service Filter */}
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Layanan</InputLabel>
+                <Select
+                  value={filters.serviceId}
+                  label='Layanan'
+                  onChange={(e) => setFilters((prev) => ({ ...prev, serviceId: e.target.value }))}
+                >
+                  <MenuItem value=''>Semua Layanan</MenuItem>
+                  {services.map((service) => (
+                    <MenuItem key={service.id} value={service.id.toString()}>
+                      {service.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Employee Filter */}
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Therapist</InputLabel>
+                <Select
+                  value={filters.employeeId}
+                  label='Therapist'
+                  onChange={(e) => setFilters((prev) => ({ ...prev, employeeId: e.target.value }))}
+                >
+                  <MenuItem value=''>Semua Therapist</MenuItem>
+                  {employees.map((employee) => (
+                    <MenuItem key={employee.id} value={employee.id.toString()}>
+                      {employee.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Status Filter */}
+            <Grid item xs={12} md={2}>
+              <FormControl fullWidth size='small'>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={filters.status}
+                  label='Status'
+                  onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
+                >
+                  <MenuItem value=''>Semua Status</MenuItem>
+                  {appointmentStatuses.map((status) => (
+                    <MenuItem key={status.value} value={status.value}>
+                      {status.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
         </CardContent>
       </Card>
 
@@ -564,7 +792,7 @@ export default function JadwalPage() {
         <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
           <Tab label={`Hari Ini (${getTodayAppointments().length})`} />
           <Tab label={`Mendatang (${getUpcomingAppointments().length})`} />
-          <Tab label={`Semua (${appointments.length})`} />
+          <Tab label={`Semua (${getFilteredAppointments().length})`} />
         </Tabs>
       </Box>
 
@@ -590,8 +818,6 @@ export default function JadwalPage() {
               </TableRow>
             ) : (
               getCurrentAppointments().map((appointment) => {
-                const statusInfo = getStatusInfo(appointment.status);
-
                 return (
                   <TableRow key={appointment.id}>
                     <TableCell>
@@ -599,7 +825,7 @@ export default function JadwalPage() {
                         <AccessTime fontSize='small' color='action' />
                         <Box>
                           <Typography variant='body2' fontWeight='medium'>
-                            {appointment.startTime} - {appointment.endTime}
+                            {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
                           </Typography>
                           <Typography variant='caption' color='textSecondary'>
                             {new Date(appointment.date).toLocaleDateString("id-ID")}
@@ -701,6 +927,19 @@ export default function JadwalPage() {
                       ))}
                     </Select>
                   </FormControl>
+                  {/* Customer Details Display */}
+                  {selectedCustomer && (
+                    <Box sx={{ mt: 1, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
+                      <Typography variant='body2' color='text.secondary'>
+                        📞 {selectedCustomer.phone}
+                      </Typography>
+                      {selectedCustomer.address && (
+                        <Typography variant='body2' color='text.secondary'>
+                          📍 {selectedCustomer.address}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
                 </Grid>
 
                 <Grid item xs={12}>
@@ -735,6 +974,17 @@ export default function JadwalPage() {
                       ))}
                     </Select>
                   </FormControl>
+                  {/* Service Price Display */}
+                  {selectedService && (
+                    <Box sx={{ mt: 1, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
+                      <Typography variant='body2' color='text.secondary'>
+                        💰 Harga: {formatCurrency(selectedService.price)}
+                      </Typography>
+                      <Typography variant='body2' color='text.secondary'>
+                        ⏱️ Durasi: {selectedService.duration} menit
+                      </Typography>
+                    </Box>
+                  )}
                 </Grid>
 
                 <Grid item xs={12}>
@@ -747,6 +997,63 @@ export default function JadwalPage() {
                     InputLabelProps={{
                       shrink: true
                     }}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Tipe Layanan</InputLabel>
+                    <Select
+                      value={formData.tipeLayanan}
+                      label='Tipe Layanan'
+                      onChange={(e) => handleFormChange("tipeLayanan", e.target.value)}
+                    >
+                      <MenuItem value='DI_TEMPAT'>Di Tempat</MenuItem>
+                      <MenuItem value='DI_RUMAH'>Di Rumah</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label='Upah Lembur'
+                    type='number'
+                    value={formData.upahLembur}
+                    onChange={(e) => handleFormChange("upahLembur", e.target.value)}
+                    InputProps={{
+                      startAdornment: <Typography sx={{ mr: 1 }}>Rp</Typography>
+                    }}
+                    placeholder='0'
+                  />
+                </Grid>
+
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label='Uang Bensin'
+                    type='number'
+                    value={formData.uangBensin}
+                    onChange={(e) => handleFormChange("uangBensin", e.target.value)}
+                    InputProps={{
+                      startAdornment: <Typography sx={{ mr: 1 }}>Rp</Typography>
+                    }}
+                    placeholder='0'
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label='Komisi'
+                    type='number'
+                    value={formData.commissionAmount}
+                    onChange={(e) => handleFormChange("commissionAmount", e.target.value)}
+                    InputProps={{
+                      startAdornment: <Typography sx={{ mr: 1 }}>Rp</Typography>
+                    }}
+                    placeholder='0'
+                    helperText='Jumlah komisi yang akan diterima oleh therapist untuk appointment ini'
                   />
                 </Grid>
 
@@ -808,10 +1115,11 @@ export default function JadwalPage() {
               !formData.serviceId ||
               !formData.date ||
               !formData.startTime ||
-              !formData.endTime
+              !formData.endTime ||
+              submitting
             }
           >
-            {editingAppointment ? "Update" : "Simpan"}
+            {submitting ? "Menyimpan..." : editingAppointment ? "Update" : "Simpan"}
           </Button>
         </DialogActions>
       </Dialog>

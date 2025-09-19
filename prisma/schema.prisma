@@ -69,7 +69,6 @@ model Employee {
   phone        String?
   position     String // therapist, receptionist, manager, etc
   salary       Decimal       @db.Decimal(10, 2)
-  commission   Decimal?      @db.Decimal(5, 2) // percentage
   avatar       String?       @db.Text
   isActive     Boolean       @default(true)
   hireDate     DateTime      @default(now())
@@ -110,20 +109,24 @@ model Service {
 }
 
 model Appointment {
-  id         Int                  @id @default(autoincrement())
-  customerId Int
-  employeeId Int
-  date       DateTime
-  startTime  DateTime
-  endTime    DateTime
-  status     AppointmentStatus    @default(SCHEDULED)
-  totalPrice Decimal              @db.Decimal(10, 2)
-  notes      String?              @db.Text
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
-  customer   Customer             @relation(fields: [customerId], references: [id])
-  employee   Employee             @relation(fields: [employeeId], references: [id])
-  services   AppointmentService[]
+  id               Int                  @id @default(autoincrement())
+  customerId       Int
+  employeeId       Int
+  date             DateTime
+  startTime        DateTime
+  endTime          DateTime
+  status           AppointmentStatus    @default(SCHEDULED)
+  totalPrice       Decimal              @db.Decimal(10, 2)
+  commissionAmount Decimal              @default(0) @db.Decimal(10, 2)
+  tipeLayanan      String?              @default("DI_TEMPAT")
+  upahLembur       Decimal?             @default(0) @db.Decimal(10, 2)
+  uangBensin       Decimal?             @default(0) @db.Decimal(10, 2)
+  notes            String?              @db.Text
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  customer         Customer             @relation(fields: [customerId], references: [id])
+  employee         Employee             @relation(fields: [employeeId], references: [id])
+  services         AppointmentService[]
 }
 
 model AppointmentService {

@@ -51,7 +51,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { customerId, employeeId, date, startTime, endTime, serviceIds, notes } = body;
+    const {
+      customerId,
+      employeeId,
+      date,
+      startTime,
+      endTime,
+      serviceIds,
+      notes,
+      tipeLayanan,
+      upahLembur,
+      uangBensin,
+      commissionAmount
+    } = body;
 
     throwIfMissing(
       { customerId, employeeId, date, startTime, endTime, serviceIds },
@@ -67,7 +79,11 @@ export async function POST(request: NextRequest) {
       startTime: new Date(startTime),
       endTime: new Date(endTime),
       serviceIds: Array.isArray(serviceIds) ? serviceIds.map(Number) : [parseInt(serviceIds)],
-      ...(notes && { notes })
+      ...(notes && { notes }),
+      ...(tipeLayanan && { tipeLayanan }),
+      ...(upahLembur !== undefined && { upahLembur: parseFloat(upahLembur) }),
+      ...(uangBensin !== undefined && { uangBensin: parseFloat(uangBensin) }),
+      ...(commissionAmount !== undefined && { commissionAmount: parseFloat(commissionAmount) })
     };
 
     const appointment = await appointmentRepo.create(appointmentData);

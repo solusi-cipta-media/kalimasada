@@ -71,6 +71,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
 
   for (const service of services) {
     const { id, ...data } = service;
+
     await db.service.upsert({
       where: { id },
       update: data,
@@ -87,7 +88,6 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345678901",
       position: "Senior Therapist",
       salary: 4500000,
-      commission: 10,
       hireDate: new Date("2023-01-15")
     },
     {
@@ -97,7 +97,6 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345678902",
       position: "Massage Therapist",
       salary: 3500000,
-      commission: 8,
       hireDate: new Date("2023-03-20")
     },
     {
@@ -107,7 +106,6 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345678903",
       position: "Facial Specialist",
       salary: 4000000,
-      commission: 12,
       hireDate: new Date("2023-02-10")
     },
     {
@@ -117,7 +115,6 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345678904",
       position: "Receptionist",
       salary: 3000000,
-      commission: 0,
       hireDate: new Date("2023-01-05")
     },
     {
@@ -127,13 +124,13 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345678905",
       position: "Nail Technician",
       salary: 3200000,
-      commission: 15,
       hireDate: new Date("2023-04-01")
     }
   ];
 
   for (const employee of employees) {
     const { id, ...data } = employee;
+
     await db.employee.upsert({
       where: { id },
       update: data,
@@ -192,6 +189,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
 
   for (const customer of customers) {
     const { id, ...data } = customer;
+
     await db.customer.upsert({
       where: { id },
       update: data,
