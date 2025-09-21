@@ -65,10 +65,41 @@ export default class PayrollRepository {
     });
   }
 
-  async generatePayroll(year: number, month: number, generatedBy: number) {
+  async deleteExistingPayroll(year: number, month: number) {
+    try {
+      console.log("Deleting existing payroll for:", { year, month });
+
+      const deletedCount = await database.payroll.deleteMany({
+        where: {
+          year,
+          month
+        }
+      });
+
+      console.log("Deleted payroll records:", deletedCount);
+
+      return deletedCount;
+    } catch (error) {
+      console.error("Error deleting existing payroll:", error);
+      throw new ResponseError("Gagal menghapus payroll yang ada: " + (error as Error).message, 500);
+    }
+  }
+
+  async generatePayroll(year: number, month: number, generatedBy: number, employeeIds?: number[]) {
+    console.log("Starting payroll generation:", { year, month, generatedBy, employeeIds });
+
+    // Build employee filter - either specified IDs or all active employees
+    const employeeFilter: any = { isActive: true };
+
+    if (employeeIds && employeeIds.length > 0) {
+      employeeFilter.id = { in: employeeIds };
+    }
+
     const employees = await database.employee.findMany({
-      where: { isActive: true }
+      where: employeeFilter
     });
+
+    console.log("Found employees:", employees.length);
 
     // Check if generation already exists for this period
     const existingGeneration = await database.payrollGeneration.findUnique({
@@ -81,6 +112,7 @@ export default class PayrollRepository {
     });
 
     if (existingGeneration) {
+      console.log("Generation already exists:", existingGeneration);
       throw new ResponseError(`Payroll generation for ${month}/${year} already exists`, 400);
     }
 
@@ -100,9 +132,29 @@ export default class PayrollRepository {
     });
 
     for (const employee of employees) {
+      console.log("Processing employee:", employee.name, employee.id);
+
+      // Check if payroll already exists for this employee
+      const existingPayroll = await database.payroll.findUnique({
+        where: {
+          employeeId_month_year: {
+            employeeId: employee.id,
+            month,
+            year
+          }
+        }
+      });
+
+      if (existingPayroll) {
+        console.log("Payroll already exists for", employee.name, "- skipping");
+        continue;
+      }
+
       // Calculate commission from completed appointments
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
+
+      console.log("Date range:", { startDate, endDate });
 
       const appointments = await database.appointment.findMany({
         where: {
@@ -115,6 +167,8 @@ export default class PayrollRepository {
         }
       });
 
+      console.log("Found appointments for", employee.name, ":", appointments.length);
+
       // Sum up commission amounts from all completed appointments
       const commissionAmount = appointments.reduce((sum, apt) => {
         const commission = apt.commissionAmount ? Number(apt.commissionAmount) : 0;
@@ -124,28 +178,41 @@ export default class PayrollRepository {
 
       const totalSalary = Number(employee.salary) + commissionAmount;
 
-      const payroll = await database.payroll.create({
-        data: {
-          employeeId: employee.id,
-          month,
-          year,
-          baseSalary: employee.salary,
-          commission: commissionAmount,
-          bonus: 0,
-          deduction: 0,
-          totalSalary,
-          generationId: generation.id
-        },
-        include: {
-          employee: true
-        }
+      console.log("Salary calculation for", employee.name, ":", {
+        baseSalary: Number(employee.salary),
+        commissionAmount,
+        totalSalary
       });
 
-      totalAmount += totalSalary;
-      results.push({ employee, payroll, status: "created" });
-    }
+      try {
+        const payroll = await database.payroll.create({
+          data: {
+            employeeId: employee.id,
+            month,
+            year,
+            baseSalary: employee.salary,
+            commission: commissionAmount,
+            bonus: 0,
+            deduction: 0,
+            totalSalary,
+            generationId: generation.id
+          },
+          include: {
+            employee: true
+          }
+        });
 
-    // Update the generation record with final counts
+        totalAmount += totalSalary;
+        results.push({ employee, payroll, status: "created" });
+        console.log("Successfully created payroll for", employee.name);
+      } catch (error) {
+        console.error("Error creating payroll for", employee.name, ":", error);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        throw new ResponseError(`Failed to create payroll for ${employee.name}: ${errorMessage}`, 500);
+      }
+    } // Update the generation record with final counts
+
     await database.payrollGeneration.update({
       where: { id: generation.id },
       data: {

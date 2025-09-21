@@ -93,8 +93,7 @@ export const responseError = (error: any) => {
       message: message
     },
     {
-      status: statusCode,
-      statusText: message
+      status: statusCode
     }
   );
 };

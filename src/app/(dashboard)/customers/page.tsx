@@ -29,7 +29,7 @@ import {
   Paper,
   Avatar
 } from "@mui/material";
-import { Add, Edit, Delete, Person, Email, Phone, LocationOn, Cake } from "@mui/icons-material";
+import { Add, Edit, Delete, Person, Email, Phone, LocationOn } from "@mui/icons-material";
 
 import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
 
@@ -58,7 +58,6 @@ export default function CustomerPage() {
     email: "",
     phone: "",
     address: "",
-    birthDate: "",
     gender: "",
     notes: ""
   });
@@ -89,7 +88,6 @@ export default function CustomerPage() {
         email: customer.email || "",
         phone: customer.phone,
         address: customer.address || "",
-        birthDate: customer.birthDate || "",
         gender: customer.gender || "",
         notes: customer.notes || ""
       });
@@ -100,7 +98,6 @@ export default function CustomerPage() {
         email: "",
         phone: "",
         address: "",
-        birthDate: "",
         gender: "",
         notes: ""
       });
@@ -117,7 +114,6 @@ export default function CustomerPage() {
       email: "",
       phone: "",
       address: "",
-      birthDate: "",
       gender: "",
       notes: ""
     });
@@ -132,7 +128,6 @@ export default function CustomerPage() {
         email: formData.email || null,
         phone: formData.phone,
         address: formData.address || null,
-        birthDate: formData.birthDate || null,
         gender: formData.gender || null,
         notes: formData.notes || null
       };
@@ -186,19 +181,6 @@ export default function CustomerPage() {
     return gender === "FEMALE" ? "Perempuan" : "Laki-laki";
   };
 
-  const calculateAge = (birthDate: string) => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-
-    return age;
-  };
-
   if (loading) {
     return (
       <Box display='flex' justifyContent='center' alignItems='center' minHeight='400px'>
@@ -225,7 +207,7 @@ export default function CustomerPage() {
               <TableCell>Customer</TableCell>
               <TableCell>Kontak</TableCell>
               <TableCell>Alamat</TableCell>
-              <TableCell>Umur/Gender</TableCell>
+              <TableCell>Gender</TableCell>
               <TableCell>Total Kunjungan</TableCell>
               <TableCell>Kunjungan Terakhir</TableCell>
               <TableCell align='center'>Aksi</TableCell>
@@ -241,11 +223,6 @@ export default function CustomerPage() {
                     </Avatar>
                     <Box>
                       <Typography variant='subtitle2'>{customer.name}</Typography>
-                      {customer.birthDate && (
-                        <Typography variant='body2' color='textSecondary'>
-                          <Cake fontSize='small' /> {formatDate(customer.birthDate)}
-                        </Typography>
-                      )}
                     </Box>
                   </Box>
                 </TableCell>
@@ -270,9 +247,6 @@ export default function CustomerPage() {
                 </TableCell>
                 <TableCell>
                   <Box>
-                    {customer.birthDate && (
-                      <Typography variant='body2'>{calculateAge(customer.birthDate)} tahun</Typography>
-                    )}
                     {customer.gender && (
                       <Chip
                         label={getGenderLabel(customer.gender)}
@@ -343,33 +317,17 @@ export default function CustomerPage() {
               rows={2}
             />
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label='Tanggal Lahir'
-                  value={formData.birthDate}
-                  onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                  fullWidth
-                  type='date'
-                  InputLabelProps={{
-                    shrink: true
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Gender</InputLabel>
-                  <Select
-                    value={formData.gender}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    label='Gender'
-                  >
-                    <MenuItem value='MALE'>Laki-laki</MenuItem>
-                    <MenuItem value='FEMALE'>Perempuan</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
+            <FormControl fullWidth>
+              <InputLabel>Gender</InputLabel>
+              <Select
+                value={formData.gender}
+                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                label='Gender'
+              >
+                <MenuItem value='MALE'>Laki-laki</MenuItem>
+                <MenuItem value='FEMALE'>Perempuan</MenuItem>
+              </Select>
+            </FormControl>
 
             <TextField
               label='Catatan'

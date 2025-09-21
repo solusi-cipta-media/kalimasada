@@ -33,7 +33,14 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  Container
+  Container,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormLabel,
+  Autocomplete,
+  Checkbox,
+  ListItemText
 } from "@mui/material";
 import {
   Add,
@@ -98,10 +105,14 @@ const PayrollPage = () => {
 
   const [formData, setFormData] = useState({
     month: "",
-    year: ""
+    year: "",
+    employeeSelection: "all", // "all" or "selected"
+    selectedEmployeeIds: [] as number[]
   });
 
   const [generating, setGenerating] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [payingAll, setPayingAll] = useState(false);
   const [payingIndividual, setPayingIndividual] = useState<number | null>(null);
 
@@ -162,19 +173,47 @@ const PayrollPage = () => {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      setLoadingEmployees(true);
+      const response = await fetch("/api/employee?isActive=true");
+      const result = await response.json();
+
+      if (response.ok) {
+        setEmployees(result.data || []);
+      } else {
+        console.error("Error fetching employees:", result.message);
+        setEmployees([]);
+      }
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      setEmployees([]);
+    } finally {
+      setLoadingEmployees(false);
+    }
+  };
+
   const handleOpenDialog = () => {
     const currentDate = new Date();
 
     setFormData({
       month: (currentDate.getMonth() + 1).toString(),
-      year: currentDate.getFullYear().toString()
+      year: currentDate.getFullYear().toString(),
+      employeeSelection: "all",
+      selectedEmployeeIds: []
     });
+    fetchEmployees();
     setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setFormData({ month: "", year: "" });
+    setFormData({
+      month: "",
+      year: "",
+      employeeSelection: "all",
+      selectedEmployeeIds: []
+    });
   };
 
   const handleCloseDetailDialog = () => {
@@ -184,21 +223,36 @@ const PayrollPage = () => {
 
   const handleSubmit = async () => {
     const monthName = monthNames[Number(formData.month) - 1];
-    const result = await Swal.fire(confirmDialog.generate(`gaji bulan ${monthName} ${formData.year}`));
+
+    const employeeText =
+      formData.employeeSelection === "all"
+        ? "semua karyawan"
+        : `${formData.selectedEmployeeIds.length} karyawan terpilih`;
+
+    const result = await Swal.fire(
+      confirmDialog.generate(`gaji bulan ${monthName} ${formData.year} untuk ${employeeText}`)
+    );
 
     if (result.isConfirmed) {
       try {
         setGenerating(true);
+
+        const requestBody: any = {
+          month: Number(formData.month),
+          year: Number(formData.year)
+        };
+
+        // Add employee IDs if specific employees are selected
+        if (formData.employeeSelection === "selected") {
+          requestBody.employeeIds = formData.selectedEmployeeIds;
+        }
 
         const response = await fetch("/api/payroll/generation", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            month: Number(formData.month),
-            year: Number(formData.year)
-          })
+          body: JSON.stringify(requestBody)
         });
 
         const result = await response.json();
@@ -563,9 +617,11 @@ const PayrollPage = () => {
           <DialogTitle>Generate Gaji Bulanan</DialogTitle>
           <DialogContent>
             <Alert severity='info' sx={{ mb: 3 }}>
-              Generate gaji akan menghitung gaji semua karyawan aktif berdasarkan periode yang dipilih.
+              Generate gaji akan menghitung gaji karyawan berdasarkan periode dan pilihan karyawan yang dipilih.
             </Alert>
+
             <Grid container spacing={2} sx={{ mt: 1 }}>
+              {/* Period Selection */}
               <Grid item xs={6}>
                 <FormControl fullWidth>
                   <InputLabel>Bulan</InputLabel>
@@ -592,6 +648,70 @@ const PayrollPage = () => {
                   inputProps={{ min: 2020, max: 2030 }}
                 />
               </Grid>
+
+              {/* Employee Selection Options */}
+              <Grid item xs={12}>
+                <FormControl component='fieldset' sx={{ mt: 2 }}>
+                  <FormLabel component='legend'>Pilihan Karyawan</FormLabel>
+                  <RadioGroup
+                    value={formData.employeeSelection}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        employeeSelection: e.target.value,
+                        selectedEmployeeIds: [] // Reset selection when changing mode
+                      }))
+                    }
+                    row
+                  >
+                    <FormControlLabel value='all' control={<Radio />} label='Semua Karyawan Aktif' />
+                    <FormControlLabel value='selected' control={<Radio />} label='Karyawan Terpilih' />
+                  </RadioGroup>
+                </FormControl>
+              </Grid>
+
+              {/* Employee Selection Dropdown */}
+              {formData.employeeSelection === "selected" && (
+                <Grid item xs={12}>
+                  <Autocomplete
+                    multiple
+                    options={employees}
+                    getOptionLabel={(option) => `${option.name} - ${option.position}`}
+                    value={employees.filter((emp) => formData.selectedEmployeeIds.includes(emp.id))}
+                    onChange={(_, newValue) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        selectedEmployeeIds: newValue.map((emp) => emp.id)
+                      }));
+                    }}
+                    loading={loadingEmployees}
+                    renderOption={(props, option, { selected }) => (
+                      <li {...props}>
+                        <Checkbox checked={selected} style={{ marginRight: 8 }} />
+                        <ListItemText
+                          primary={option.name}
+                          secondary={`${option.position} - ${new Intl.NumberFormat("id-ID", {
+                            style: "currency",
+                            currency: "IDR"
+                          }).format(option.salary)}`}
+                        />
+                      </li>
+                    )}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label='Pilih Karyawan'
+                        placeholder={loadingEmployees ? "Memuat karyawan..." : "Ketik untuk mencari karyawan"}
+                        helperText={
+                          formData.selectedEmployeeIds.length > 0
+                            ? `${formData.selectedEmployeeIds.length} karyawan dipilih`
+                            : "Pilih minimal 1 karyawan"
+                        }
+                      />
+                    )}
+                  />
+                </Grid>
+              )}
             </Grid>
           </DialogContent>
           <DialogActions>
@@ -599,7 +719,12 @@ const PayrollPage = () => {
             <Button
               onClick={handleSubmit}
               variant='contained'
-              disabled={generating || !formData.month || !formData.year}
+              disabled={
+                generating ||
+                !formData.month ||
+                !formData.year ||
+                (formData.employeeSelection === "selected" && formData.selectedEmployeeIds.length === 0)
+              }
             >
               {generating ? <CircularProgress size={20} /> : "Generate Gaji"}
             </Button>

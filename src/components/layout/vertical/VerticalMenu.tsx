@@ -47,47 +47,56 @@ const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) =
 );
 
 const VerticalMenu = ({ scrollMenu }: Props) => {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["vertical-menus"],
     queryFn: async () => {
-      const response = await axiosInstance.get("/api/access/sidebar");
-      const data: FeatureAccess[] = response.data.data;
+      console.log("Fetching vertical menu data...");
 
-      function convertToVerticalMenuDataType(menus: FeatureAccess[]) {
-        const menuData: any[] = [];
+      try {
+        const response = await axiosInstance.get("/api/access/sidebar");
 
-        for (const menu of menus) {
-          const children = convertToVerticalMenuDataType(menu.children ?? []);
+        console.log("Menu API response:", response.data);
+        const data: FeatureAccess[] = response.data.data;
 
-          const append: any = {
-            label: menu.label
-          };
+        function convertToVerticalMenuDataType(menus: FeatureAccess[]) {
+          const menuData: any[] = [];
 
-          if (menu.icon) {
-            append["icon"] = menu.icon;
+          for (const menu of menus) {
+            const children = convertToVerticalMenuDataType(menu.children ?? []);
+
+            const append: any = {
+              label: menu.label
+            };
+
+            if (menu.icon) {
+              append["icon"] = menu.icon;
+            }
+
+            if (menu.isSection) {
+              append["isSection"] = menu.isSection;
+            }
+
+            if (menu.href) {
+              append["href"] = menu.href;
+            }
+
+            if (children.length > 0) {
+              append["children"] = children;
+            }
+
+            menuData.push(append);
           }
 
-          if (menu.isSection) {
-            append["isSection"] = menu.isSection;
-          }
-
-          if (menu.href) {
-            append["href"] = menu.href;
-          }
-
-          if (children.length > 0) {
-            append["children"] = children;
-          }
-
-          menuData.push(append);
+          return menuData;
         }
 
-        return menuData;
+        const output = convertToVerticalMenuDataType(data);
+
+        return output;
+      } catch (error) {
+        console.error("Error fetching menu data:", error);
+        throw error;
       }
-
-      const output = convertToVerticalMenuDataType(data);
-
-      return output;
     }
   });
 
@@ -123,10 +132,14 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         renderExpandedMenuItemIcon={{ icon: <i className='tabler-circle text-xs' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        {isLoading || !data ? (
-          <div className='text-center'>Loading...</div>
+        {isLoading ? (
+          <div className='text-center p-4'>Loading menu...</div>
+        ) : error ? (
+          <div className='text-center p-4 text-red-500'>Error loading menu: {error.message}</div>
+        ) : !data || data.length === 0 ? (
+          <div className='text-center p-4'>No menu items available</div>
         ) : (
-          <GenerateVerticalMenu menuData={data ?? []} />
+          <GenerateVerticalMenu menuData={data} />
         )}
         <Box height={60}></Box>
       </Menu>

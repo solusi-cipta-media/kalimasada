@@ -4,6 +4,9 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 
+// Next Imports
+import { useRouter } from "next/navigation";
+
 // MUI Imports
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { styled, useTheme } from "@mui/material/styles";
@@ -60,6 +63,7 @@ const MaskImg = styled("img")({
 const LoginV2 = ({ mode }: { mode: SystemMode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false);
+  const router = useRouter();
 
   // Vars
   const darkImg = "/images/pages/auth-mask-dark.png";
@@ -132,9 +136,7 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
       setErrorText(null);
 
       // Redirect to home page
-      setTimeout(() => {
-        window.location.href = "/home";
-      }, 100);
+      router.push("/home");
     } catch (error) {
       console.error("Login error:", error);
       setErrorText("Invalid username or password");

@@ -1,8 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { hash } from "bcrypt";
+
 import EmployeeRepository from "@/repositories/EmployeeRepository";
 import { responseError, throwIfMissing } from "@/@core/utils/serverHelpers";
 import { ResponseError } from "@/types/errors";
+import database from "@/@libs/database";
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,9 +62,27 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { name, email, phone, position, salary, commission, avatar, isActive, hireDate } = body;
+    const {
+      name,
+      email,
+      phone,
+      position,
+      salary,
+      avatar,
+      isActive,
+      hireDate,
+      createUserAccount,
+      roleId,
+      password,
+      userActive
+    } = body;
 
     throwIfMissing({ name, email, position, salary }, "Name, email, position, and salary are required");
+
+    // If creating user account, validate user-specific fields
+    if (createUserAccount) {
+      throwIfMissing({ roleId, password }, "Role and password are required for user account creation");
+    }
 
     const employeeRepo = new EmployeeRepository();
 
@@ -73,24 +94,64 @@ export async function POST(request: NextRequest) {
       return responseError(new ResponseError("Employee with this email already exists", 400));
     }
 
+    // Check if user with email already exists (if creating user account)
+    if (createUserAccount) {
+      const existingUser = await database.user.findUnique({ where: { email } });
+
+      if (existingUser) {
+        return responseError(new ResponseError("User with this email already exists", 400));
+      }
+    }
+
     const employeeData = {
       name,
       email,
       position,
       salary: parseFloat(salary),
       ...(phone && { phone }),
-      ...(commission && { commission: parseFloat(commission) }),
       ...(avatar && { avatar }),
       ...(isActive !== undefined && { isActive: Boolean(isActive) }),
       ...(hireDate && { hireDate: new Date(hireDate) })
     };
 
-    const employee = await employeeRepo.create(employeeData);
+    let employee;
+    let user = null;
+
+    if (createUserAccount) {
+      // Use database transaction to create both employee and user
+      const result = await database.$transaction(async (prisma) => {
+        // Create employee first
+        const newEmployee = await prisma.employee.create({
+          data: employeeData
+        });
+
+        // Hash password and create user
+        const hashedPassword = await hash(password, 12);
+
+        const newUser = await prisma.user.create({
+          data: {
+            fullName: name,
+            email,
+            password: hashedPassword,
+            roleId: parseInt(roleId),
+            avatar
+          }
+        });
+
+        return { employee: newEmployee, user: newUser };
+      });
+
+      employee = result.employee;
+      user = result.user;
+    } else {
+      // Create only employee
+      employee = await employeeRepo.create(employeeData);
+    }
 
     return NextResponse.json({
       success: true,
-      data: employee,
-      message: "Employee created successfully"
+      data: { employee, user },
+      message: createUserAccount ? "Employee and user account created successfully" : "Employee created successfully"
     });
   } catch (error) {
     console.error("Error creating employee:", error);

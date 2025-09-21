@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const body = await request.json();
-    const { name, email, phone, position, salary, commission, avatar, isActive } = body;
+    const { name, email, phone, position, salary, avatar, isActive } = body;
 
     const employeeRepo = new EmployeeRepository();
 
@@ -66,7 +66,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       ...(phone !== undefined && { phone }),
       ...(position && { position }),
       ...(salary && { salary: parseFloat(salary) }),
-      ...(commission !== undefined && { commission: parseFloat(commission) }),
       ...(avatar !== undefined && { avatar }),
       ...(isActive !== undefined && { isActive: Boolean(isActive) })
     };

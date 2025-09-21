@@ -16,8 +16,8 @@ This is a Next.js 14+ admin dashboard built with MUI v5, featuring role-based ac
 - Sidebar Menu : - Beranda (Main Dashboard) - Layanan (Services) - Jadwal (Schedule) - Gaji (Salary) - Karyawan (Employees) - Customer (Customers)
 - For every submitting a form, show a loading indicator on the submit button and disable the button to prevent multiple submissions.
 - For every change page, show a loading indicator on main content area.
-- Show a success message when the form is successfully submitted.
-- Show an error message when the form submission fails.
+- Show a success message when the form is successfully submitted using sweetalert.
+- Show an error message when the form submission fails using sweetalert.
 
 ### UI UX
 

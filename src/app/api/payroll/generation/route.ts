@@ -40,10 +40,14 @@ export async function POST(req: NextRequest) {
   try {
     const userId = req.headers.get("userId");
 
+    console.log("Payroll generation request:", { userId });
+
     throwIfMissing(userId, "User id is required.");
 
     const body = await req.json();
-    const { month, year } = body;
+    const { month, year, employeeIds } = body;
+
+    console.log("Payroll generation params:", { month, year, userId, employeeIds });
 
     throwIfMissing(month, "Month is required.");
     throwIfMissing(year, "Year is required.");
@@ -52,7 +56,12 @@ export async function POST(req: NextRequest) {
     const PayrollRepository = (await import("@/repositories/PayrollRepository")).default;
     const payrollRepository = new PayrollRepository();
 
-    const result = await payrollRepository.generatePayroll(Number(year), Number(month), Number(userId));
+    // Delete any existing payroll for this period first to avoid conflicts
+    await payrollRepository.deleteExistingPayroll(Number(year), Number(month));
+
+    const result = await payrollRepository.generatePayroll(Number(year), Number(month), Number(userId), employeeIds);
+
+    console.log("Payroll generation completed:", result);
 
     return NextResponse.json({
       message: "Payroll generation completed successfully",

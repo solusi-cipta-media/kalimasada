@@ -53,7 +53,6 @@ export default class EmployeeRepository {
     phone?: string;
     position: string;
     salary: number;
-    commission?: number;
     avatar?: string;
     hireDate?: Date;
   }) {
@@ -61,7 +60,6 @@ export default class EmployeeRepository {
       data: {
         ...data,
         salary: data.salary,
-        commission: data.commission || 0,
         hireDate: data.hireDate || new Date()
       }
     });
@@ -75,7 +73,6 @@ export default class EmployeeRepository {
       phone?: string;
       position?: string;
       salary?: number;
-      commission?: number;
       avatar?: string;
       isActive?: boolean;
     }
@@ -84,8 +81,7 @@ export default class EmployeeRepository {
       where: { id },
       data: {
         ...data,
-        ...(data.salary && { salary: data.salary }),
-        ...(data.commission !== undefined && { commission: data.commission })
+        ...(data.salary && { salary: data.salary })
       }
     });
   }

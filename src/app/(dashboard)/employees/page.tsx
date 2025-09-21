@@ -27,9 +27,14 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Avatar
+  Avatar,
+  CircularProgress,
+  Autocomplete,
+  FormControl,
+  InputLabel,
+  OutlinedInput
 } from "@mui/material";
-import { Add, Edit, Delete, Person, Email, Phone } from "@mui/icons-material";
+import { Add, Edit, Delete, Visibility, VisibilityOff, Person, Email, Phone } from "@mui/icons-material";
 
 import { confirmDialog, successAlert, errorAlert } from "@/utils/sweetAlert";
 
@@ -48,60 +53,60 @@ interface Employee {
 export default function KaryawanPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     position: "",
-    salary: ""
+    salary: "",
+    roleId: null as number | null,
+    password: "",
+    createUserAccount: true,
+    userActive: true
   });
 
   useEffect(() => {
     fetchEmployees();
+    fetchRoles();
   }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch("/api/autocomplete/role");
+      const result = await response.json();
+
+      if (response.ok) {
+        setRoles(result.data || []);
+      } else {
+        console.error("Error fetching roles:", result.message);
+      }
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
-      // TODO: Implement API call to fetch employees
-      // For now, using mock data
-      setEmployees([
-        {
-          id: 1,
-          name: "Sari Dewi",
-          email: "sari.dewi@kalimasada.com",
-          phone: "+62812345678901",
-          position: "Senior Therapist",
-          salary: 4500000,
-          isActive: true,
-          hireDate: "2023-01-15"
-        },
-        {
-          id: 2,
-          name: "Made Wirawan",
-          email: "made.wirawan@kalimasada.com",
-          phone: "+62812345678902",
-          position: "Massage Therapist",
-          salary: 3500000,
-          isActive: true,
-          hireDate: "2023-03-20"
-        },
-        {
-          id: 3,
-          name: "Kadek Ayu",
-          email: "kadek.ayu@kalimasada.com",
-          phone: "+62812345678903",
-          position: "Facial Specialist",
-          salary: 4000000,
-          isActive: true,
-          hireDate: "2023-02-10"
-        }
-      ]);
-      setLoading(false);
+      setLoading(true);
+      const response = await fetch("/api/employee");
+      const result = await response.json();
+
+      if (response.ok) {
+        setEmployees(result.data || []);
+      } else {
+        console.error("Error fetching employees:", result.message);
+        Swal.fire(errorAlert.simple(result.message || "Gagal memuat data karyawan"));
+      }
     } catch (error) {
       console.error("Error fetching employees:", error);
+      Swal.fire(errorAlert.network());
+    } finally {
       setLoading(false);
     }
   };
@@ -114,7 +119,11 @@ export default function KaryawanPage() {
         email: employee.email,
         phone: employee.phone || "",
         position: employee.position,
-        salary: employee.salary.toString()
+        salary: employee.salary.toString(),
+        roleId: null, // Will be set from user data if exists
+        password: "", // Password not shown when editing
+        createUserAccount: false, // Editing mode
+        userActive: true
       });
     } else {
       setEditingEmployee(null);
@@ -123,7 +132,11 @@ export default function KaryawanPage() {
         email: "",
         phone: "",
         position: "",
-        salary: ""
+        salary: "",
+        roleId: null,
+        password: "",
+        createUserAccount: true,
+        userActive: true
       });
     }
 
@@ -138,34 +151,105 @@ export default function KaryawanPage() {
       email: "",
       phone: "",
       position: "",
-      salary: ""
+      salary: "",
+      roleId: null,
+      password: "",
+      createUserAccount: true,
+      userActive: true
     });
   };
 
   const handleSubmit = async () => {
     try {
-      // TODO: Implement API call to save employee
-      console.log("Saving employee:", formData);
-      await fetchEmployees();
-      handleCloseDialog();
+      setSaving(true);
 
-      // TODO: Show success toast
+      const employeeData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        position: formData.position,
+        salary: Number(formData.salary),
+        isActive: true,
+
+        // User creation data
+        createUserAccount: formData.createUserAccount,
+        roleId: formData.roleId,
+        password: formData.password,
+        userActive: formData.userActive
+      };
+
+      let response;
+      let successMessage;
+
+      if (editingEmployee) {
+        // Update existing employee
+        response = await fetch(`/api/employee/${editingEmployee.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(employeeData)
+        });
+        successMessage = "Karyawan berhasil diperbarui!";
+      } else {
+        // Create new employee
+        response = await fetch("/api/employee", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(employeeData)
+        });
+        successMessage = "Karyawan berhasil ditambahkan!";
+      }
+
+      const result = await response.json();
+
+      if (response.ok) {
+        await fetchEmployees();
+        handleCloseDialog();
+        Swal.fire(successAlert.timer(successMessage));
+      } else {
+        Swal.fire(errorAlert.simple(result.message || "Terjadi kesalahan saat menyimpan data"));
+      }
     } catch (error) {
       console.error("Error saving employee:", error);
-
-      // TODO: Show error toast
+      Swal.fire(errorAlert.network());
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleToggleActive = async (employee: Employee) => {
     try {
-      // TODO: Implement API call to toggle employee status
-      console.log("Toggling employee status:", employee.id);
-      await fetchEmployees();
+      const response = await fetch(`/api/employee/${employee.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: employee.name,
+          email: employee.email,
+          phone: employee.phone,
+          position: employee.position,
+          salary: employee.salary,
+          isActive: !employee.isActive
+        })
+      });
 
-      // TODO: Show success toast
+      const result = await response.json();
+
+      if (response.ok) {
+        await fetchEmployees();
+        const statusText = !employee.isActive ? "diaktifkan" : "dinonaktifkan";
+
+        Swal.fire(successAlert.timer(`Karyawan berhasil ${statusText}!`));
+      } else {
+        Swal.fire(errorAlert.simple(result.message || "Terjadi kesalahan saat mengubah status"));
+      }
     } catch (error) {
       console.error("Error toggling employee status:", error);
+      Swal.fire(errorAlert.network());
     }
   };
 
@@ -174,11 +258,18 @@ export default function KaryawanPage() {
 
     if (result.isConfirmed) {
       try {
-        // TODO: Implement API call to delete employee
-        console.log("Deleting employee:", employee.id);
-        await fetchEmployees();
+        const response = await fetch(`/api/employee/${employee.id}`, {
+          method: "DELETE"
+        });
 
-        Swal.fire(successAlert.timer("Karyawan berhasil dihapus!"));
+        const result = await response.json();
+
+        if (response.ok) {
+          await fetchEmployees();
+          Swal.fire(successAlert.timer("Karyawan berhasil dihapus!"));
+        } else {
+          Swal.fire(errorAlert.simple(result.message || "Terjadi kesalahan saat menghapus data"));
+        }
       } catch (error) {
         console.error("Error deleting employee:", error);
         Swal.fire(errorAlert.network());
@@ -347,7 +438,76 @@ export default function KaryawanPage() {
                   }}
                 />
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <Autocomplete
+                  options={roles}
+                  getOptionLabel={(option) => option.label || option.name}
+                  value={roles.find((role) => role.id === formData.roleId) || null}
+                  onChange={(_, newValue) => setFormData({ ...formData, roleId: newValue?.id || null })}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label='Role Sistem'
+                      required={formData.createUserAccount}
+                      helperText='Role untuk akses sistem'
+                    />
+                  )}
+                  fullWidth
+                />
+              </Grid>
             </Grid>
+
+            {/* User Account Section */}
+            <Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.createUserAccount}
+                    onChange={(e) => setFormData({ ...formData, createUserAccount: e.target.checked })}
+                  />
+                }
+                label='Buat Akun User Sistem'
+              />
+            </Box>
+
+            {formData.createUserAccount && (
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel htmlFor='password-input'>Password</InputLabel>
+                    <OutlinedInput
+                      id='password-input'
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      endAdornment={
+                        <InputAdornment position='end'>
+                          <IconButton
+                            aria-label='toggle password visibility'
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge='end'
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      }
+                      label='Password'
+                    />
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.userActive}
+                        onChange={(e) => setFormData({ ...formData, userActive: e.target.checked })}
+                      />
+                    }
+                    label='User Aktif'
+                  />
+                </Grid>
+              </Grid>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
@@ -355,9 +515,16 @@ export default function KaryawanPage() {
           <Button
             onClick={handleSubmit}
             variant='contained'
-            disabled={!formData.name || !formData.email || !formData.position || !formData.salary}
+            disabled={
+              saving ||
+              !formData.name ||
+              !formData.email ||
+              !formData.position ||
+              !formData.salary ||
+              (formData.createUserAccount && (!formData.roleId || !formData.password))
+            }
           >
-            {editingEmployee ? "Update" : "Simpan"}
+            {saving ? <CircularProgress size={20} color='inherit' /> : editingEmployee ? "Update" : "Simpan"}
           </Button>
         </DialogActions>
       </Dialog>

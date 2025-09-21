@@ -6,8 +6,6 @@ export default async function UserDummy(db: PrismaClient) {
   if (process.env.APP_MODE === "production") return;
   const password = await bcrypt.hash("12345", 10);
 
-  db.user.findMany();
-
   await db.role.upsert({
     where: {
       id: 1
@@ -42,6 +40,25 @@ export default async function UserDummy(db: PrismaClient) {
       roleId: 1
     }
   });
-  await db.$queryRaw`SELECT setval(pg_get_serial_sequence('"Role"', 'id'), (SELECT MAX(id) FROM "Role"))`;
-  await db.$queryRaw`SELECT setval(pg_get_serial_sequence('"User"', 'id'), (SELECT MAX(id) FROM "User"))`;
+
+  // Get all permissions and create role permissions for Super Admin
+  const permissions = await db.permission.findMany();
+
+  // Clear existing role permissions for this role
+  await db.rolePermission.deleteMany({
+    where: {
+      roleId: 1
+    }
+  });
+
+  // Create role permissions for all permissions in a batch
+  if (permissions.length > 0) {
+    await db.rolePermission.createMany({
+      data: permissions.map((permission) => ({
+        roleId: 1,
+        permissionId: permission.id
+      })),
+      skipDuplicates: true
+    });
+  }
 }
