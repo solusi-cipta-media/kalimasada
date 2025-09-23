@@ -43,6 +43,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const {
       customerId,
       employeeId,
+      serviceIds,
       date,
       startTime,
       endTime,
@@ -66,6 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updateData = {
       ...(customerId && { customerId: parseInt(customerId) }),
       ...(employeeId && { employeeId: parseInt(employeeId) }),
+      ...(serviceIds && Array.isArray(serviceIds) && { serviceIds: serviceIds.map((id: any) => parseInt(id)) }),
       ...(date && { date: new Date(date) }),
       ...(startTime && { startTime: new Date(startTime) }),
       ...(endTime && { endTime: new Date(endTime) }),
