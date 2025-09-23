@@ -203,21 +203,18 @@ export default function JadwalPage() {
 
   const fetchServices = async () => {
     try {
-      const response = await fetch("/api/service");
+      const response = await fetch("/api/services");
       const result = await response.json();
 
-      if (result.success) {
+      if (result.data) {
         setServices(result.data);
+      } else {
+        console.error("No services data received:", result);
+        setServices([]);
       }
     } catch (error) {
       console.error("Error fetching services:", error);
-
-      // Mock data for services if API is not available
-      setServices([
-        { id: 1, name: "Massage Relaksasi", price: 150000, duration: 60 },
-        { id: 2, name: "Facial Treatment", price: 200000, duration: 90 },
-        { id: 3, name: "Body Scrub", price: 180000, duration: 75 }
-      ]);
+      setServices([]);
     }
   };
 

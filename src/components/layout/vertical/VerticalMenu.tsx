@@ -28,7 +28,6 @@ import menuItemStyles from "@core/styles/vertical/menuItemStyles";
 import menuSectionStyles from "@core/styles/vertical/menuSectionStyles";
 import { GenerateVerticalMenu } from "@/components/GenerateMenu";
 
-import axiosInstance from "@/client/axiosInstance";
 import type { FeatureAccess } from "@/types/featureAccess";
 
 type RenderExpandIconProps = {
@@ -53,10 +52,27 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       console.log("Fetching vertical menu data...");
 
       try {
-        const response = await axiosInstance.get("/api/access/sidebar");
+        const response = await fetch("/api/access/sidebar", {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
 
-        console.log("Menu API response:", response.data);
-        const data: FeatureAccess[] = response.data.data;
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        console.log("Menu API response:", result);
+
+        if (!result.data) {
+          throw new Error("No menu data received");
+        }
+
+        const data: FeatureAccess[] = result.data;
 
         function convertToVerticalMenuDataType(menus: FeatureAccess[]) {
           const menuData: any[] = [];

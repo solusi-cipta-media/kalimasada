@@ -2,10 +2,9 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { responseError, throwIfMissing } from "@/@core/utils/serverHelpers";
+import { responseError, throwIfMissing, validateJsonBody } from "@/@core/utils/serverHelpers";
 import ServiceRepository from "@/repositories/ServiceRepository";
 import { ResponseError } from "@/types/errors";
-import handleUploadImage from "@/@core/utils/handleUploadImage";
 
 export async function GET() {
   try {
@@ -27,14 +26,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const name = formData.get("name") as string;
-    const description = formData.get("description") as string;
-    const price = formData.get("price") as string;
-    const duration = formData.get("duration") as string;
-    const category = formData.get("category") as string;
-    const employeeCommission = formData.get("employeeCommission") as string;
-    const imageFile = formData.get("image") as File | null;
+    const body = await validateJsonBody(req);
+    const { name, description, price, duration, category, employeeCommission } = body;
 
     throwIfMissing(name, "Service name is required");
     throwIfMissing(price, "Service price is required");
@@ -53,15 +46,6 @@ export async function POST(req: NextRequest) {
       throw new ResponseError("Employee commission must be greater than or equal to 0", 400);
     }
 
-    let imageUrl: string | undefined;
-
-    if (imageFile && imageFile.size > 0) {
-      imageUrl = await handleUploadImage({
-        file: imageFile,
-        directory: "services"
-      });
-    }
-
     const serviceRepo = new ServiceRepository();
 
     const service = await serviceRepo.create({
@@ -70,8 +54,7 @@ export async function POST(req: NextRequest) {
       price: Number(price),
       duration: Number(duration),
       category,
-      employeeCommission: employeeCommission ? Number(employeeCommission) : undefined,
-      image: imageUrl
+      employeeCommission: employeeCommission ? Number(employeeCommission) : undefined
     });
 
     return NextResponse.json(
