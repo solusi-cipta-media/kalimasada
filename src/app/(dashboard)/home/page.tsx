@@ -17,7 +17,7 @@ import {
   LineChart,
   Line
 } from "recharts";
-import { TrendingUp, TrendingDown, CalendarToday, People, Receipt, Star } from "@mui/icons-material";
+import { CalendarToday, People, Receipt, Star } from "@mui/icons-material";
 import { format, addDays } from "date-fns";
 
 interface DashboardData {
@@ -36,16 +36,12 @@ const StatCard = ({
   title,
   value,
   icon,
-  trend,
-  trendValue,
   color = "primary",
   isLoading = false
 }: {
   title: string;
   value: string | number;
   icon: React.ReactNode;
-  trend?: "up" | "down";
-  trendValue?: string;
   color?: string;
   isLoading?: boolean;
 }) => (
@@ -62,18 +58,6 @@ const StatCard = ({
             <Typography variant='h4' component='div' color={color}>
               {value}
             </Typography>
-          )}
-          {trend && trendValue && !isLoading && (
-            <Box display='flex' alignItems='center' mt={1}>
-              {trend === "up" ? (
-                <TrendingUp color='success' fontSize='small' />
-              ) : (
-                <TrendingDown color='error' fontSize='small' />
-              )}
-              <Typography variant='body2' color={trend === "up" ? "success.main" : "error.main"} ml={0.5}>
-                {trendValue}
-              </Typography>
-            </Box>
           )}
         </Box>
         <Box
@@ -186,8 +170,6 @@ export default function HomePage() {
             title='Janji Hari Ini'
             value={dashboardData.todayAppointments}
             icon={<CalendarToday />}
-            trend='up'
-            trendValue='+12%'
             color='primary'
             isLoading={loading}
           />
@@ -197,8 +179,6 @@ export default function HomePage() {
             title='Pendapatan Bulan Ini'
             value={formatCurrency(dashboardData.monthlyRevenue)}
             icon={<Receipt />}
-            trend='up'
-            trendValue='+8%'
             color='success'
             isLoading={loading}
           />
@@ -208,8 +188,6 @@ export default function HomePage() {
             title='Total Pelanggan'
             value={dashboardData.totalCustomers}
             icon={<People />}
-            trend='up'
-            trendValue='+5%'
             color='info'
             isLoading={loading}
           />
