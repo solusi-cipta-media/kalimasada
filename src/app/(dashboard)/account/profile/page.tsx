@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
+
 import {
   Breadcrumbs,
   Button,
@@ -172,7 +175,9 @@ export default function Page() {
                 </ListItem>
                 <ListItem className='px-0'>
                   <i className='tabler-calendar-clock text-[22px]' />
-                  <Typography>{data?.createdAt}</Typography>
+                  <Typography>
+                    {data?.createdAt ? format(new Date(data.createdAt), "dd MMMM yyyy HH:mm", { locale: id }) : "-"}
+                  </Typography>
                 </ListItem>
               </List>
             </CardContent>

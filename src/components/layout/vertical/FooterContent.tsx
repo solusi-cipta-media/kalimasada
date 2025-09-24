@@ -39,7 +39,7 @@ const FooterContent = () => {
       className={classnames(verticalLayoutClasses.footerContent, "flex items-center justify-between flex-wrap gap-4")}
     >
       <p>
-        <span>COPYRIGHT © {new Date().getFullYear()} NEXT JS VUEXY KIT</span>
+        <span>COPYRIGHT © {new Date().getFullYear()} SOLUSI CIPTA MEDIA</span>
       </p>
       {!isBreakpointReached && <div className='flex items-center gap-4'>v{version}</div>}
     </div>
