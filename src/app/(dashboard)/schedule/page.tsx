@@ -85,6 +85,10 @@ interface Appointment {
   endTime: string;
   status: string;
   notes?: string;
+  commissionAmount: number;
+  tipeLayanan: string;
+  upahLembur: number;
+  uangBensin: number;
   totalPrice: number;
   customer?: Customer;
   employee?: Employee;

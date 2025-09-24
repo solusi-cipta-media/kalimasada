@@ -62,20 +62,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const {
-      name,
-      email,
-      phone,
-      position,
-      salary,
-      avatar,
-      isActive,
-      hireDate,
-      createUserAccount,
-      roleId,
-      password,
-      userActive
-    } = body;
+    const { name, email, phone, position, salary, avatar, isActive, hireDate, createUserAccount, roleId, password } =
+      body;
 
     throwIfMissing({ name, email, position, salary }, "Name, email, position, and salary are required");
 

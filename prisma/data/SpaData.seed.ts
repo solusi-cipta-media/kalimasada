@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Gender, ServiceCategory, type PrismaClient } from "@prisma/client";
 
 export default async function SpaDataSeeder(db: PrismaClient) {
   // Create Services
@@ -9,7 +9,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       description: "Full body relaxing massage with traditional Balinese techniques",
       price: 350000,
       duration: 90,
-      category: "MASSAGE"
+      category: ServiceCategory.MASSAGE
     },
     {
       id: 2,
@@ -17,7 +17,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       description: "Therapeutic massage focusing on deeper layers of muscle",
       price: 400000,
       duration: 60,
-      category: "MASSAGE"
+      category: ServiceCategory.MASSAGE
     },
     {
       id: 3,
@@ -25,7 +25,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       description: "Moisturizing facial treatment for dry skin",
       price: 250000,
       duration: 75,
-      category: "FACIAL"
+      category: ServiceCategory.FACIAL
     },
     {
       id: 4,
@@ -33,7 +33,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       description: "Advanced facial treatment to reduce signs of aging",
       price: 450000,
       duration: 90,
-      category: "FACIAL"
+      category: ServiceCategory.FACIAL
     },
     {
       id: 5,
@@ -41,7 +41,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       description: "Relaxing massage using heated stones",
       price: 500000,
       duration: 120,
-      category: "MASSAGE"
+      category: ServiceCategory.MASSAGE
     },
     {
       id: 6,
@@ -49,7 +49,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       description: "Exfoliating body treatment with moisturizing wrap",
       price: 300000,
       duration: 90,
-      category: "BODY_TREATMENT"
+      category: ServiceCategory.BODY_TREATMENT
     },
     {
       id: 7,
@@ -57,7 +57,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       description: "Complete nail care for hands and feet",
       price: 150000,
       duration: 60,
-      category: "NAIL_CARE"
+      category: ServiceCategory.NAIL_CARE
     },
     {
       id: 8,
@@ -65,7 +65,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       description: "Hair treatment with professional styling",
       price: 200000,
       duration: 90,
-      category: "HAIR_TREATMENT"
+      category: ServiceCategory.HAIR_TREATMENT
     }
   ];
 
@@ -147,7 +147,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345671001",
       address: "Jl. Sunset Road No. 123, Seminyak",
       birthDate: new Date("1985-06-15"),
-      gender: "FEMALE"
+      gender: Gender.FEMALE
     },
     {
       id: 2,
@@ -156,7 +156,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345671002",
       address: "Jl. Monkey Forest Road No. 45, Ubud",
       birthDate: new Date("1978-11-22"),
-      gender: "MALE"
+      gender: Gender.MALE
     },
     {
       id: 3,
@@ -165,7 +165,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345671003",
       address: "Jl. Pantai Kuta No. 78, Kuta",
       birthDate: new Date("1992-03-08"),
-      gender: "FEMALE"
+      gender: Gender.FEMALE
     },
     {
       id: 4,
@@ -174,7 +174,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345671004",
       address: "Jl. Raya Sanur No. 234, Sanur",
       birthDate: new Date("1980-09-12"),
-      gender: "MALE"
+      gender: Gender.MALE
     },
     {
       id: 5,
@@ -183,7 +183,7 @@ export default async function SpaDataSeeder(db: PrismaClient) {
       phone: "+62812345671005",
       address: "Jl. Laksmana No. 567, Seminyak",
       birthDate: new Date("1988-12-25"),
-      gender: "FEMALE"
+      gender: Gender.FEMALE
     }
   ];
 

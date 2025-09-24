@@ -51,6 +51,7 @@ export async function middleware(req: NextRequest) {
 
     // In development, use secure: false; in production use secure: true
     const isProduction = process.env.NODE_ENV === "production";
+
     response.cookies.set(cookieName, await jwtSign({ userId }), {
       httpOnly: true,
       secure: isProduction,

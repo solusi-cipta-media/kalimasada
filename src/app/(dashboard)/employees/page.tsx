@@ -7,8 +7,6 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
   Grid,
   Chip,
   IconButton,
