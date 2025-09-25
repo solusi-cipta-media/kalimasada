@@ -2,19 +2,47 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { responseError } from "@/@core/utils/serverHelpers";
+import { responseError, throwIfMissing } from "@/@core/utils/serverHelpers";
 import { ResponseError } from "@/types/errors";
 import AppointmentRepository from "@/repositories/AppointmentRepository";
 import CustomerRepository from "@/repositories/CustomerRepository";
 import EmployeeRepository from "@/repositories/EmployeeRepository";
+import database from "@/@libs/database";
 
 export async function GET(req: NextRequest) {
   try {
+    // Get current user info with role
+    const userId = req.headers.get("userId");
+    throwIfMissing(userId, "User id is required.");
+
+    const currentUser = await database.user.findUnique({
+      where: { id: Number(userId) },
+      include: {
+        role: true
+      }
+    });
+
+    throwIfMissing(currentUser, "User not found!", 404);
+
+    // Check if user is employee (try to find employee record by email)
+    let employeeRecord = null;
+    const isEmployee = currentUser!.role.name === "Employee";
+    
+    if (isEmployee) {
+      employeeRecord = await database.employee.findFirst({
+        where: { email: currentUser!.email }
+      });
+    }
+
     // Get query parameters
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
 
     console.log("Dashboard data requested for date:", date);
+    console.log("User role:", currentUser!.role.name);
+    if (employeeRecord) {
+      console.log("Employee record found:", employeeRecord.name);
+    }
 
     // Initialize repositories
     const appointmentRepo = new AppointmentRepository();
@@ -30,13 +58,27 @@ export async function GET(req: NextRequest) {
 
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Fetch real data from database
-    const [todayAppointments, allAppointments, customers, employees] = await Promise.all([
+    // Fetch real data from database - filter based on user role
+    let [todayAppointments, allAppointments, customers, employees] = await Promise.all([
       appointmentRepo.getByDate(selectedDate),
       appointmentRepo.getAll(),
       customerRepo.getAll(),
       employeeRepo.getAll()
     ]);
+
+    // Filter data for employee users
+    if (isEmployee && employeeRecord) {
+      // Filter appointments to only show this employee's appointments
+      todayAppointments = todayAppointments.filter(apt => apt.employeeId === employeeRecord!.id);
+      allAppointments = allAppointments.filter(apt => apt.employeeId === employeeRecord!.id);
+      
+      // For employees, only show customers who have appointments with them
+      const employeeCustomerIds = new Set(allAppointments.map(apt => apt.customerId));
+      customers = customers.filter(customer => employeeCustomerIds.has(customer.id));
+      
+      // For employees, only show themselves in employee stats
+      employees = employees.filter(emp => emp.id === employeeRecord!.id);
+    }
 
     // Calculate statistics using real data
     const todayAppointmentsCount = todayAppointments.length;
@@ -179,6 +221,13 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
+    // Add role information to response for client-side display
+    const dashboardMeta = {
+      userRole: currentUser!.role.name,
+      isEmployee: isEmployee,
+      employeeName: employeeRecord?.name || null
+    };
+
     const dashboardData = {
       todayAppointments: todayAppointmentsCount,
       monthlyRevenue: monthlyRevenue,
@@ -188,7 +237,8 @@ export async function GET(req: NextRequest) {
       revenueChart,
       dailyActivity,
       topServices,
-      topEmployees
+      topEmployees,
+      meta: dashboardMeta
     };
 
     return NextResponse.json(dashboardData);

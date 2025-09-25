@@ -30,6 +30,11 @@ interface DashboardData {
   dailyActivity: Array<{ day: string; appointments: number }>;
   topServices: Array<{ name: string; count: number; revenue: number }>;
   topEmployees: Array<{ name: string; appointments: number; revenue: number }>;
+  meta?: {
+    userRole: string;
+    isEmployee: boolean;
+    employeeName: string | null;
+  };
 }
 
 const StatCard = ({
@@ -85,7 +90,12 @@ export default function HomePage() {
     revenueChart: [],
     dailyActivity: [],
     topServices: [],
-    topEmployees: []
+    topEmployees: [],
+    meta: {
+      userRole: "Super Admin",
+      isEmployee: false,
+      employeeName: null
+    }
   });
 
   const [loading, setLoading] = useState(true);
@@ -143,9 +153,17 @@ export default function HomePage() {
         <Box>
           <Typography variant='h4' gutterBottom>
             Dashboard
+            {dashboardData.meta?.isEmployee && (
+              <Typography component='span' variant='h6' color='primary' sx={{ ml: 2 }}>
+                - {dashboardData.meta.employeeName}
+              </Typography>
+            )}
           </Typography>
           <Typography variant='body1' color='textSecondary'>
-            Selamat datang di dashboard Kalimasada Spa
+            {dashboardData.meta?.isEmployee 
+              ? `Dashboard pribadi untuk ${dashboardData.meta.employeeName}` 
+              : 'Selamat datang di dashboard Kalimasada Spa'
+            }
           </Typography>
         </Box>
         <Box display='flex' alignItems='center' gap={2}>
@@ -167,7 +185,7 @@ export default function HomePage() {
       <Grid container spacing={3} mb={3}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title='Janji Hari Ini'
+            title={dashboardData.meta?.isEmployee ? 'Janji Hari Ini (Saya)' : 'Janji Hari Ini'}
             value={dashboardData.todayAppointments}
             icon={<CalendarToday />}
             color='primary'
@@ -176,7 +194,7 @@ export default function HomePage() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title='Pendapatan Bulan Ini'
+            title={dashboardData.meta?.isEmployee ? 'Pendapatan Bulan Ini (Saya)' : 'Pendapatan Bulan Ini'}
             value={formatCurrency(dashboardData.monthlyRevenue)}
             icon={<Receipt />}
             color='success'
@@ -185,7 +203,7 @@ export default function HomePage() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title='Total Pelanggan'
+            title={dashboardData.meta?.isEmployee ? 'Pelanggan Saya' : 'Total Pelanggan'}
             value={dashboardData.totalCustomers}
             icon={<People />}
             color='info'
@@ -194,7 +212,7 @@ export default function HomePage() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title='Total Karyawan'
+            title={dashboardData.meta?.isEmployee ? 'Profil Saya' : 'Total Karyawan'}
             value={dashboardData.totalEmployees}
             icon={<Star />}
             color='warning'
@@ -208,7 +226,7 @@ export default function HomePage() {
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Pendapatan 7 Hari Terakhir
+                {dashboardData.meta?.isEmployee ? 'Pendapatan Saya 7 Hari Terakhir' : 'Pendapatan 7 Hari Terakhir'}
               </Typography>
               {loading ? (
                 <Box display='flex' justifyContent='center' py={4}>
@@ -233,7 +251,7 @@ export default function HomePage() {
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Distribusi Layanan
+                {dashboardData.meta?.isEmployee ? 'Layanan Saya' : 'Distribusi Layanan'}
               </Typography>
               {loading ? (
                 <Box display='flex' justifyContent='center' py={4}>
@@ -269,7 +287,7 @@ export default function HomePage() {
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Aktivitas Harian (7 Hari Terakhir)
+                {dashboardData.meta?.isEmployee ? 'Aktivitas Harian Saya (7 Hari Terakhir)' : 'Aktivitas Harian (7 Hari Terakhir)'}
               </Typography>
               {loading ? (
                 <Box display='flex' justifyContent='center' py={4}>
@@ -296,7 +314,7 @@ export default function HomePage() {
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Layanan Terpopuler
+                {dashboardData.meta?.isEmployee ? 'Layanan Terpopuler Saya' : 'Layanan Terpopuler'}
               </Typography>
               {loading ? (
                 <Box display='flex' justifyContent='center' py={4}>
@@ -327,7 +345,7 @@ export default function HomePage() {
           <Card>
             <CardContent>
               <Typography variant='h6' gutterBottom>
-                Karyawan Terbaik
+                {dashboardData.meta?.isEmployee ? 'Performa Saya' : 'Karyawan Terbaik'}
               </Typography>
               {loading ? (
                 <Box display='flex' justifyContent='center' py={4}>

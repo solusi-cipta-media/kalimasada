@@ -64,6 +64,29 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return responseError(new ResponseError("Appointment not found", 404));
     }
 
+    // Check therapist schedule availability if time/employee is being changed
+    if ((employeeId || startTime || endTime || date)) {
+      const targetEmployeeId = employeeId ? parseInt(employeeId) : existingAppointment.employeeId;
+      const targetDate = date ? new Date(date) : existingAppointment.date;
+      const targetStartTime = startTime ? new Date(startTime) : existingAppointment.startTime;
+      const targetEndTime = endTime ? new Date(endTime) : existingAppointment.endTime;
+
+      const isAvailable = await appointmentRepo.checkTimeSlotAvailability(
+        targetEmployeeId,
+        targetDate,
+        targetStartTime,
+        targetEndTime,
+        id // Exclude current appointment from conflict check
+      );
+
+      if (!isAvailable) {
+        return NextResponse.json({
+          success: false,
+          message: "Therapist sudah memiliki appointment pada waktu tersebut. Silakan pilih waktu lain."
+        }, { status: 409 });
+      }
+    }
+
     const updateData = {
       ...(customerId && { customerId: parseInt(customerId) }),
       ...(employeeId && { employeeId: parseInt(employeeId) }),

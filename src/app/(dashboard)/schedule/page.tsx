@@ -74,6 +74,7 @@ interface Service {
   name: string;
   price: number;
   duration: number;
+  employeeCommission?: number;
 }
 
 interface Appointment {
@@ -143,6 +144,16 @@ export default function JadwalPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [tabValue, setTabValue] = useState(0);
+
+  // User profile and role state
+  const [currentUser, setCurrentUser] = useState<{
+    id: number;
+    fullName: string;
+    email: string;
+    role: { name: string };
+  } | null>(null);
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
+  const [isEmployee, setIsEmployee] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -222,10 +233,59 @@ export default function JadwalPage() {
     }
   };
 
+  // Fetch current user profile and determine if they are an employee
+  const fetchUserProfile = async () => {
+    try {
+      const response = await fetch("/api/account/profile");
+      const result = await response.json();
+
+      if (response.ok && result.data) {
+        // Fetch user with role information using dashboard API meta
+        const dashboardResponse = await fetch("/api/dashboard");
+        const dashboardResult = await dashboardResponse.json();
+        
+        if (dashboardResponse.ok && dashboardResult.meta) {
+          const userRole = dashboardResult.meta.userRole;
+          const employeeName = dashboardResult.meta.employeeName;
+          
+          setCurrentUser({
+            ...result.data,
+            role: { name: userRole }
+          });
+          
+          const isEmp = userRole === "Employee";
+          setIsEmployee(isEmp);
+          
+          if (isEmp && employeeName) {
+            // Find employee record by email
+            const empResponse = await fetch("/api/employee");
+            const empResult = await empResponse.json();
+            
+            if (empResult.success) {
+              const employeeRecord = empResult.data.find((emp: Employee) => 
+                emp.email === result.data.email
+              );
+              setCurrentEmployee(employeeRecord || null);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+
   const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/appointment");
+      
+      // Build API URL with employee filter for employee users
+      let apiUrl = "/api/appointment";
+      if (isEmployee && currentEmployee) {
+        apiUrl += `?employeeId=${currentEmployee.id}`;
+      }
+      
+      const response = await fetch(apiUrl);
       const result = await response.json();
 
       if (result.success) {
@@ -243,7 +303,7 @@ export default function JadwalPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isEmployee, currentEmployee]);
 
   // Calculate appointment statistics
   const calculateStatistics = (appointmentsData: Appointment[]) => {
@@ -258,11 +318,25 @@ export default function JadwalPage() {
   };
 
   useEffect(() => {
-    fetchCustomers();
-    fetchEmployees();
-    fetchServices();
-    fetchAppointments();
-  }, [fetchAppointments]);
+    const initializeData = async () => {
+      // First, fetch user profile to determine role
+      await fetchUserProfile();
+      
+      // Then fetch other data
+      fetchCustomers();
+      fetchEmployees();
+      fetchServices();
+    };
+    
+    initializeData();
+  }, []);
+
+  // Separate useEffect to fetch appointments after user profile is loaded
+  useEffect(() => {
+    if (currentUser !== null) {
+      fetchAppointments();
+    }
+  }, [fetchAppointments, currentUser, isEmployee, currentEmployee]);
 
   const handleOpenDialog = (appointment?: Appointment) => {
     if (appointment) {
@@ -284,7 +358,7 @@ export default function JadwalPage() {
       setEditingAppointment(null);
       setFormData({
         customerId: "",
-        employeeId: "",
+        employeeId: isEmployee && currentEmployee ? currentEmployee.id.toString() : "",
         serviceId: "",
         date: new Date().toISOString().split("T")[0],
         startTime: null,
@@ -311,16 +385,26 @@ export default function JadwalPage() {
       [field]: value
     }));
 
-    // Auto-calculate end time based on service duration
+    // Auto-calculate end time based on service duration and set commission
     if (field === "serviceId" && value) {
       const selectedService = services.find((s) => s.id.toString() === value);
 
-      if (selectedService && formData.startTime) {
-        const endTime = moment(formData.startTime).add(selectedService.duration, "minutes");
+      if (selectedService) {
+        let updates: any = {};
+
+        // Set commission amount from service or default to 50,000
+        const commissionAmount = selectedService.employeeCommission || 50000;
+        updates.commissionAmount = commissionAmount.toString();
+
+        // Auto-calculate end time if start time is already selected
+        if (formData.startTime) {
+          const endTime = moment(formData.startTime).add(selectedService.duration, "minutes");
+          updates.endTime = endTime;
+        }
 
         setFormData((prev) => ({
           ...prev,
-          endTime: endTime
+          ...updates
         }));
       }
     }
@@ -587,12 +671,21 @@ export default function JadwalPage() {
   return (
     <Box p={3}>
       <Box display='flex' justifyContent='space-between' alignItems='center' mb={3}>
-        <Typography variant='h4' component='h1'>
-          Manajemen Jadwal
-        </Typography>
-        <Button variant='contained' startIcon={<Add />} onClick={() => handleOpenDialog()}>
-          Buat Appointment
-        </Button>
+        <Box>
+          <Typography variant='h4' component='h1'>
+            {isEmployee ? 'Jadwal Saya' : 'Manajemen Jadwal'}
+          </Typography>
+          {isEmployee && currentEmployee && (
+            <Typography variant='body2' color='textSecondary'>
+              Appointment untuk {currentEmployee.name}
+            </Typography>
+          )}
+        </Box>
+        {!isEmployee && (
+          <Button variant='contained' startIcon={<Add />} onClick={() => handleOpenDialog()}>
+            Buat Appointment
+          </Button>
+        )}
       </Box>
 
       {/* Statistics Cards */}
@@ -807,13 +900,13 @@ export default function JadwalPage() {
               <TableCell>Layanan</TableCell>
               <TableCell>Harga</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Aksi</TableCell>
+              {!isEmployee && <TableCell>Aksi</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
             {getCurrentAppointments().length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align='center'>
+                <TableCell colSpan={isEmployee ? 6 : 7} align='center'>
                   <Typography color='textSecondary'>Tidak ada appointment ditemukan</Typography>
                 </TableCell>
               </TableRow>
@@ -889,14 +982,16 @@ export default function JadwalPage() {
                       </FormControl>
                     </TableCell>
                     <TableCell>
-                      <Box display='flex' gap={1}>
-                        <IconButton size='small' color='primary' onClick={() => handleOpenDialog(appointment)}>
-                          <Edit fontSize='small' />
-                        </IconButton>
-                        <IconButton size='small' color='error' onClick={() => handleDelete(appointment)}>
-                          <Delete fontSize='small' />
-                        </IconButton>
-                      </Box>
+                      {!isEmployee && (
+                        <Box display='flex' gap={1}>
+                          <IconButton size='small' color='primary' onClick={() => handleOpenDialog(appointment)}>
+                            <Edit fontSize='small' />
+                          </IconButton>
+                          <IconButton size='small' color='error' onClick={() => handleDelete(appointment)}>
+                            <Delete fontSize='small' />
+                          </IconButton>
+                        </Box>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -950,6 +1045,7 @@ export default function JadwalPage() {
                       value={formData.employeeId}
                       label='Therapist'
                       onChange={(e) => handleFormChange("employeeId", e.target.value)}
+                      disabled={isEmployee}
                     >
                       {employees.map((employee) => (
                         <MenuItem key={employee.id} value={employee.id.toString()}>
@@ -957,6 +1053,11 @@ export default function JadwalPage() {
                         </MenuItem>
                       ))}
                     </Select>
+                    {isEmployee && currentEmployee && (
+                      <Typography variant='caption' color='textSecondary' sx={{ mt: 1 }}>
+                        Appointment akan dibuat untuk: {currentEmployee.name}
+                      </Typography>
+                    )}
                   </FormControl>
                 </Grid>
 
@@ -983,6 +1084,14 @@ export default function JadwalPage() {
                       </Typography>
                       <Typography variant='body2' color='text.secondary'>
                         ⏱️ Durasi: {selectedService.duration} menit
+                      </Typography>
+                      <Typography variant='body2' color='primary.main' fontWeight='medium'>
+                        💸 Komisi: {formatCurrency(selectedService.employeeCommission || 50000)}
+                        {!selectedService.employeeCommission && (
+                          <Typography component='span' variant='caption' color='text.secondary' sx={{ ml: 1 }}>
+                            (default)
+                          </Typography>
+                        )}
                       </Typography>
                     </Box>
                   )}

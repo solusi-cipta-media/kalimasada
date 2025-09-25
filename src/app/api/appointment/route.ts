@@ -72,12 +72,31 @@ export async function POST(request: NextRequest) {
 
     const appointmentRepo = new AppointmentRepository();
 
+    // Check therapist schedule availability
+    const startDateTime = new Date(startTime);
+    const endDateTime = new Date(endTime);
+    const appointmentDate = new Date(date);
+    
+    const isAvailable = await appointmentRepo.checkTimeSlotAvailability(
+      parseInt(employeeId),
+      appointmentDate,
+      startDateTime,
+      endDateTime
+    );
+
+    if (!isAvailable) {
+      return NextResponse.json({
+        success: false,
+        message: "Therapist sudah memiliki appointment pada waktu tersebut. Silakan pilih waktu lain."
+      }, { status: 409 });
+    }
+
     const appointmentData = {
       customerId: parseInt(customerId),
       employeeId: parseInt(employeeId),
-      date: new Date(date),
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
+      date: appointmentDate,
+      startTime: startDateTime,
+      endTime: endDateTime,
       serviceIds: Array.isArray(serviceIds) ? serviceIds.map(Number) : [parseInt(serviceIds)],
       ...(notes && { notes }),
       ...(tipeLayanan && { tipeLayanan }),
